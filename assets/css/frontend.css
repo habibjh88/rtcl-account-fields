@@ -1,0 +1,134 @@
+/* ==========================================================================
+   Classified Listing – Account Custom Fields (front-end)
+   ========================================================================== */
+
+/* --- Account edit form section ------------------------------------------ */
+.rtcl-acf-account-wrap {
+	margin-top: 10px;
+}
+
+.rtcl-acf-section-title.rtcl-acf-section-title {
+	margin: 24px 0 16px;
+	padding-top: 20px;
+	border-top: 1px solid rgba(0, 0, 0, 0.08);
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.rtcl-acf-field .rtcl-acf-checkbox-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 400;
+	cursor: pointer;
+}
+
+/* --- Author page display ------------------------------------------------- */
+.rtcl-acf-author-fields {
+	margin-top: 20px;
+	padding-top: 20px;
+	border-top: 1px solid rgba(0, 0, 0, 0.08);
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px 32px;
+}
+
+.rtcl-acf-author-item {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.rtcl-acf-author-label {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--rtcl-acf-muted, #8a8f98);
+	line-height: 1.4;
+}
+
+.rtcl-acf-author-value {
+	font-size: 15px;
+	font-weight: 500;
+	color: var(--rtcl-acf-text, #2b2f36);
+	word-break: break-word;
+	line-height: 1.5;
+}
+
+.rtcl-acf-author-value a {
+	color: inherit;
+	text-decoration: none;
+	transition: color 0.15s ease;
+}
+
+.rtcl-acf-author-value a:hover {
+	color: var(--rtcl-primary-color, #e74c3c);
+	text-decoration: underline;
+}
+
+.rtcl-acf-author-textarea .rtcl-acf-author-value {
+	font-weight: 400;
+}
+
+@media (max-width: 575px) {
+	.rtcl-acf-author-fields {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 12px;
+	}
+}
+
+/* ==========================================================================
+   Radio / checkbox groups & file upload (account form)
+   ========================================================================== */
+.rtcl-acf-radio-group,
+.rtcl-acf-checkbox-group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.rtcl-acf-radio,
+.rtcl-acf-checkbox,
+.rtcl-acf-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	line-height: 1.4;
+}
+
+.rtcl-acf-radio input,
+.rtcl-acf-checkbox input,
+.rtcl-acf-checkbox-label input {
+	margin: 0;
+	flex: none;
+}
+
+.rtcl-acf-file {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.rtcl-acf-file-current {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.rtcl-acf-file-thumb {
+	border-radius: 6px;
+	object-fit: cover;
+}
+
+.rtcl-acf-file-remove {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	cursor: pointer;
+}

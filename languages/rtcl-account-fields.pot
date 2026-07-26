@@ -1,0 +1,269 @@
+# Copyright (C) 2026 RadiusTheme
+# This file is distributed under the same license as the Classified Listing – Account Custom Fields plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Classified Listing – Account Custom Fields 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/rtcl-account-fields\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-26T06:56:29+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: rtcl-account-fields\n"
+
+#. Plugin Name of the plugin
+#: classified-listing-account-fields.php
+#: classified-listing-account-fields.php:70
+msgid "Classified Listing – Account Custom Fields"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: classified-listing-account-fields.php
+msgid "https://radiustheme.com/"
+msgstr ""
+
+#. Description of the plugin
+#: classified-listing-account-fields.php
+msgid "Add-on for Classified Listing. Lets admins create extra custom fields for the front-end Account Details page and display them on the public author page."
+msgstr ""
+
+#. Author of the plugin
+#: classified-listing-account-fields.php
+msgid "RadiusTheme"
+msgstr ""
+
+#. Author URI of the plugin
+#: classified-listing-account-fields.php
+msgid "https://radiustheme.com"
+msgstr ""
+
+#: classified-listing-account-fields.php:71
+msgid "requires the Classified Listing plugin to be installed and active."
+msgstr ""
+
+#: includes/class-admin.php:30
+#: includes/class-admin.php:66
+msgid "Account Custom Fields"
+msgstr ""
+
+#: includes/class-admin.php:31
+msgid "Account Fields"
+msgstr ""
+
+#: includes/class-admin.php:69
+msgid "← Back to list"
+msgstr ""
+
+#: includes/class-admin.php:71
+msgid "Add New Field"
+msgstr ""
+
+#: includes/class-admin.php:95
+msgid "Field saved successfully."
+msgstr ""
+
+#: includes/class-admin.php:96
+msgid "Field deleted."
+msgstr ""
+
+#: includes/class-admin.php:97
+msgid "Something went wrong. Please check the form and try again."
+msgstr ""
+
+#: includes/class-admin.php:98
+msgid "A field with that key already exists. Please choose a different label/key."
+msgstr ""
+
+#: includes/class-admin.php:99
+msgid "The field label is required."
+msgstr ""
+
+#: includes/class-admin.php:119
+msgid "These fields are added to the front-end \"Account Details\" page and can be shown on the public author page."
+msgstr ""
+
+#: includes/class-admin.php:124
+#: includes/class-admin.php:190
+msgid "Label"
+msgstr ""
+
+#: includes/class-admin.php:125
+msgid "Field Key"
+msgstr ""
+
+#: includes/class-admin.php:126
+msgid "Type"
+msgstr ""
+
+#: includes/class-admin.php:127
+#: includes/class-admin.php:229
+msgid "Required"
+msgstr ""
+
+#: includes/class-admin.php:128
+msgid "Show on author page"
+msgstr ""
+
+#: includes/class-admin.php:129
+msgid "Actions"
+msgstr ""
+
+#. translators: %s: link to add a field
+#: includes/class-admin.php:139
+#, php-format
+msgid "No custom fields yet. %s to create your first one."
+msgstr ""
+
+#: includes/class-admin.php:140
+msgid "Add a field"
+msgstr ""
+
+#: includes/class-admin.php:151
+#: includes/class-admin.php:152
+#: includes/class-frontend.php:269
+msgid "Yes"
+msgstr ""
+
+#: includes/class-admin.php:154
+msgid "Edit"
+msgstr ""
+
+#: includes/class-admin.php:158
+msgid "Delete this field? Existing saved values will remain in the database but stop displaying."
+msgstr ""
+
+#: includes/class-admin.php:159
+msgid "Delete"
+msgstr ""
+
+#: includes/class-admin.php:194
+msgid "Shown as the field label on the account form and author page."
+msgstr ""
+
+#: includes/class-admin.php:198
+msgid "Field Type"
+msgstr ""
+
+#: includes/class-admin.php:208
+msgid "Options"
+msgstr ""
+
+#: includes/class-admin.php:211
+msgid "One option per line. Only used for the \"Select\" type."
+msgstr ""
+
+#: includes/class-admin.php:215
+msgid "Placeholder"
+msgstr ""
+
+#: includes/class-admin.php:222
+msgid "Description"
+msgstr ""
+
+#: includes/class-admin.php:225
+msgid "Optional helper text shown under the field on the account form."
+msgstr ""
+
+#: includes/class-admin.php:233
+msgid "Make this field required on the account form."
+msgstr ""
+
+#: includes/class-admin.php:238
+msgid "Author page"
+msgstr ""
+
+#: includes/class-admin.php:242
+msgid "Display this field on the public author page."
+msgstr ""
+
+#: includes/class-admin.php:248
+msgid "Update Field"
+msgstr ""
+
+#: includes/class-admin.php:248
+msgid "Add Field"
+msgstr ""
+
+#: includes/class-admin.php:272
+#: includes/class-admin.php:341
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: includes/class-fields.php:31
+msgid "Text"
+msgstr ""
+
+#: includes/class-fields.php:32
+msgid "Textarea"
+msgstr ""
+
+#: includes/class-fields.php:33
+msgid "Number"
+msgstr ""
+
+#: includes/class-fields.php:34
+msgid "Email"
+msgstr ""
+
+#: includes/class-fields.php:35
+msgid "URL / Website"
+msgstr ""
+
+#: includes/class-fields.php:36
+msgid "Phone"
+msgstr ""
+
+#: includes/class-fields.php:37
+msgid "Select (dropdown)"
+msgstr ""
+
+#: includes/class-fields.php:38
+msgid "Checkbox (Yes/No)"
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:190
+#, php-format
+msgid "%s is required."
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:202
+#, php-format
+msgid "Please enter a valid email address for %s."
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:209
+#, php-format
+msgid "Please enter a valid URL for %s."
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:216
+#, php-format
+msgid "Please enter a valid number for %s."
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:224
+#, php-format
+msgid "Please enter a valid phone number for %s."
+msgstr ""
+
+#. translators: %s: field label
+#: includes/class-fields.php:231
+#, php-format
+msgid "Please choose a valid option for %s."
+msgstr ""
+
+#: includes/class-frontend.php:65
+msgid "Additional Information"
+msgstr ""
+
+#: includes/class-frontend.php:106
+msgid "— Select —"
+msgstr ""
