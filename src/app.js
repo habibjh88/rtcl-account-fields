@@ -78,6 +78,14 @@ export default function App() {
 		useSensor( KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates } )
 	);
 
+	// A fresh edit supersedes the previous save result: drop the notice so the
+	// "Changes saved." badge never lingers next to "Unsaved changes".
+	useEffect( () => {
+		if ( dirty ) {
+			setNotice( null );
+		}
+	}, [ dirty ] );
+
 	// Warn before leaving with unsaved changes.
 	useEffect( () => {
 		const handler = ( e ) => {
@@ -101,6 +109,8 @@ export default function App() {
 			options: [ 'select', 'radio', 'checkbox' ].includes( type )
 				? [ __( 'Option 1', 'rtcl-account-fields' ), __( 'Option 2', 'rtcl-account-fields' ) ]
 				: [],
+			// A new File field allows the common document/image types by default.
+			file_ext: type === 'file' ? 'pdf, jpg, png' : '',
 		} ),
 		[ types ]
 	);

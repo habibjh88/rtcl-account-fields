@@ -98,6 +98,7 @@ class Admin {
 					'types'         => Fields::types(),
 					'defaults'      => Fields::defaults(),
 					'visibility'    => $this->visibility_labels(),
+					'fileTypes'     => Fields::available_file_types(),
 				]
 			) . ';',
 			'before'
@@ -111,7 +112,7 @@ class Admin {
 	 * @return string
 	 */
 	private function primary_color_css() {
-		$primary = '#0066bf'; // Base plugin default.
+		$primary = '#3232ff'; // Base plugin default.
 
 		if ( class_exists( '\Rtcl\Helpers\Functions' ) && method_exists( '\Rtcl\Helpers\Functions', 'get_option' ) ) {
 			$style = \Rtcl\Helpers\Functions::get_option( 'rtcl_style_settings' );
@@ -120,12 +121,12 @@ class Admin {
 			}
 		}
 
-		$primary = $this->normalize_hex( $primary, '#0066bf' );
+		$primary = $this->normalize_hex( $primary, '#3232ff' );
 		$dark    = $this->darken_hex( $primary, 18 );
 		$rgb     = $this->hex_to_rgb( $primary );
 
 		return sprintf(
-			'.rtcl-acf-wrap{--rtcl-acf-primary:%1$s;--rtcl-acf-primary-dark:%2$s;--rtcl-acf-primary-rgb:%3$d,%4$d,%5$d;}',
+			'.rtcl-acf-wrap{--rtcl-primary-color:%1$s;--rtcl-primary-dark:%2$s;--rtcl-primary-rgb:%3$d,%4$d,%5$d;}',
 			$primary,
 			$dark,
 			$rgb['r'],

@@ -2,6 +2,22 @@
    Classified Listing – Account Custom Fields (front-end)
    ========================================================================== */
 
+/* --- Account form: readable input text vs. dim placeholder --------------- */
+/* Global fix for the whole Edit Account page (all fields, not just the
+   form-builder ones): real typed values are dark, placeholders are dimmed
+   so the two are clearly distinguishable. */
+#rtcl-user-account input,
+#rtcl-user-account textarea,
+#rtcl-user-account select {
+	color: #212121;
+}
+
+#rtcl-user-account input::placeholder,
+#rtcl-user-account textarea::placeholder {
+	color: #9aa0a6;
+	opacity: 1; /* Firefox dims placeholders by default; keep our color exact. */
+}
+
 /* --- Account edit form section ------------------------------------------ */
 .rtcl-acf-account-wrap {
 	margin-top: 10px;
@@ -131,4 +147,106 @@
 	gap: 6px;
 	font-size: 13px;
 	cursor: pointer;
+}
+
+/* When "Remove" is ticked: show the current file as struck-through/dimmed and
+   flag the action, so the click has visible effect before the form is saved. */
+.rtcl-acf-file.is-removing .rtcl-acf-file-thumb,
+.rtcl-acf-file.is-removing .rtcl-acf-file-current > a {
+	opacity: 0.4;
+	text-decoration: line-through;
+}
+
+.rtcl-acf-file.is-removing .rtcl-acf-file-remove {
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.rtcl-acf-file.is-removing .rtcl-acf-file-remove::after {
+	content: " — will be removed on save";
+	font-weight: 400;
+	font-style: italic;
+	opacity: 0.85;
+}
+
+.rtcl-acf-file-error {
+	margin: 6px 0 0;
+	color: #b32d2e;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+/* Live character counter for text / textarea length limits. */
+.rtcl-acf-charcount {
+	margin: 4px 0 0;
+	font-size: 12px;
+	line-height: 1.3;
+	color: #6b7280;
+	text-align: right;
+}
+
+.rtcl-acf-charcount.is-min {
+	color: #b45309;
+	text-align: left;
+}
+
+.rtcl-acf-charcount.is-max {
+	color: #b32d2e;
+	font-weight: 500;
+}
+
+/* --- Switch toggle ------------------------------------------------------- */
+.rtcl-acf-switch-field {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+	line-height: 1.4;
+}
+
+.rtcl-acf-switch-input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	opacity: 0;
+	clip: rect(0 0 0 0);
+	overflow: hidden;
+}
+
+.rtcl-acf-switch-track {
+	position: relative;
+	flex: none;
+	display: inline-block;
+	width: 42px;
+	height: 24px;
+	border-radius: 999px;
+	background: #c7ccd3;
+	transition: background 0.2s ease;
+}
+
+.rtcl-acf-switch-thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	transition: transform 0.2s ease;
+}
+
+.rtcl-acf-switch-input:checked + .rtcl-acf-switch-track {
+	background: var(--rtcl-primary-color, #0066bf);
+}
+
+.rtcl-acf-switch-input:checked + .rtcl-acf-switch-track .rtcl-acf-switch-thumb {
+	transform: translateX(18px);
+}
+
+.rtcl-acf-switch-input:focus-visible + .rtcl-acf-switch-track {
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.18);
 }

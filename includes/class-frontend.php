@@ -44,6 +44,13 @@ class Frontend {
 		if ( $is_account || is_author() ) {
 			wp_enqueue_style( 'rtcl-acf-frontend', RTCL_ACF_URL . 'assets/css/frontend.css', [], RTCL_ACF_VERSION );
 		}
+
+		// The file "Remove" feedback + on-change validation script is only needed
+		// on the account form.
+		if ( $is_account ) {
+			wp_enqueue_script( 'rtcl-acf-frontend', RTCL_ACF_URL . 'assets/js/frontend.js', [], RTCL_ACF_VERSION, true );
+			wp_localize_script( 'rtcl-acf-frontend', 'rtclAcfFront', [ 'i18n' => Fields::frontend_i18n() ] );
+		}
 	}
 
 	/**
@@ -120,11 +127,12 @@ class Frontend {
 				switch ( $field['type'] ) {
 					case 'textarea':
 						printf(
-							'<textarea name="%1$s" id="%2$s" rows="4" class="rtcl-form-control" placeholder="%3$s"%4$s>%5$s</textarea>',
+							'<textarea name="%1$s" id="%2$s" rows="4" class="rtcl-form-control" placeholder="%3$s"%4$s%5$s>%6$s</textarea>',
 							esc_attr( $name ),
 							esc_attr( $input_id ),
 							esc_attr( $field['placeholder'] ),
 							$required, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static markup.
+							Fields::html_constraint_attrs( $field ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped in helper.
 							esc_textarea( $scalar )
 						);
 						break;
@@ -181,6 +189,16 @@ class Frontend {
 						}
 						break;
 
+					case 'switch':
+						printf(
+							'<label class="rtcl-acf-switch-field"><input type="hidden" name="%1$s" value=""><input type="checkbox" class="rtcl-acf-switch-input" name="%1$s" id="%2$s" value="1" %3$s><span class="rtcl-acf-switch-track"><span class="rtcl-acf-switch-thumb"></span></span><span class="rtcl-acf-switch-text">%4$s</span></label>',
+							esc_attr( $name ),
+							esc_attr( $input_id ),
+							checked( $scalar, '1', false ),
+							esc_html( $field['placeholder'] ? $field['placeholder'] : $field['label'] )
+						);
+						break;
+
 					case 'file':
 						$this->render_file_input( $field, (int) $scalar, $input_id );
 						break;
@@ -207,13 +225,14 @@ class Frontend {
 					default:
 						$input_type = in_array( $field['type'], [ 'number', 'email', 'url' ], true ) ? $field['type'] : 'text';
 						printf(
-							'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="rtcl-form-control" placeholder="%5$s"%6$s>',
+							'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="rtcl-form-control" placeholder="%5$s"%6$s%7$s>',
 							esc_attr( $input_type ),
 							esc_attr( $name ),
 							esc_attr( $input_id ),
 							esc_attr( $scalar ),
 							esc_attr( $field['placeholder'] ),
-							$required // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+							$required, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+							Fields::html_constraint_attrs( $field ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped in helper.
 						);
 						break;
 				}
@@ -250,12 +269,27 @@ class Frontend {
 			);
 			echo '</div>';
 		}
+		// Note: no HTML "accept" attribute here on purpose. The base account form
+		// runs jQuery Validate, which turns an `accept` attribute into a mimetype
+		// rule that misreads extensions and rejects valid files. Types are enforced
+		// server-side (Fields::field_allowed_mimes) and validated on change by our
+		// own script using the data-* attributes below.
+		$allowed_exts = Fields::field_allowed_extensions( $field );
+		$max_bytes    = Fields::field_max_upload_size( $field );
+		$data_attrs   = ' data-maxsize="' . (int) $max_bytes . '"'
+			. ' data-maxlabel="' . esc_attr( size_format( $max_bytes ) ) . '"';
+		if ( ! empty( $allowed_exts ) ) {
+			$data_attrs .= ' data-allowed="' . esc_attr( implode( ',', $allowed_exts ) ) . '"'
+				. ' data-allowed-label="' . esc_attr( Fields::allowed_extensions_label( $field ) ) . '"';
+		}
 		printf(
-			'<input type="file" name="%1$s[%2$s]" id="%3$s" class="rtcl-form-control">',
+			'<input type="file" name="%1$s[%2$s]" id="%3$s" class="rtcl-form-control"%4$s>',
 			esc_attr( Fields::FILE_INPUT ),
 			esc_attr( $field['id'] ),
-			esc_attr( $input_id )
+			esc_attr( $input_id ),
+			$data_attrs // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped above.
 		);
+		echo '<p class="description small rtcl-acf-file-hint">' . esc_html( Fields::file_constraints_hint( $field ) ) . '</p>';
 		echo '</div>';
 	}
 
@@ -280,7 +314,9 @@ class Frontend {
 		}
 
 		$user_id   = get_current_user_id();
-		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? wp_unslash( $_POST[ self::INPUT ] ) : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// Pass raw (slashed) values through: Fields::validate_value() unslashes
+		// once internally. Pre-unslashing here would double-unslash the value.
+		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- unslashed + validated in Fields::validate_value().
 
 		foreach ( Fields::all() as $field ) {
 			// Never validate a field the user's account type can't see.
@@ -438,6 +474,9 @@ class Frontend {
 				if ( is_array( $value ) ) {
 					return esc_html( implode( ', ', $value ) );
 				}
+				return esc_html__( 'Yes', 'rtcl-account-fields' );
+
+			case 'switch':
 				return esc_html__( 'Yes', 'rtcl-account-fields' );
 
 			case 'file':

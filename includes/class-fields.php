@@ -22,6 +22,25 @@ class Fields {
 	const META_PREFIX = '_rtcl_acf_';
 
 	/**
+	 * Message templates for the front-end script (file + length feedback), shared
+	 * by every surface that loads assets/js/frontend.js.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function frontend_i18n() {
+		return [
+			/* translators: %s: comma-separated list of accepted file types */
+			'fileType' => __( 'This file type is not allowed. Accepted types: %s.', 'rtcl-account-fields' ),
+			/* translators: %s: maximum file size, e.g. "1 MB" */
+			'fileSize' => __( 'This file is too large. Maximum size is %s.', 'rtcl-account-fields' ),
+			/* translators: %s: minimum number of characters */
+			'charsMin' => __( 'Please enter at least %s characters.', 'rtcl-account-fields' ),
+			/* translators: %s: maximum number of characters */
+			'charsMax' => __( 'Maximum %s characters reached.', 'rtcl-account-fields' ),
+		];
+	}
+
+	/**
 	 * Supported field types => human label.
 	 *
 	 * @return array<string,string>
@@ -34,9 +53,10 @@ class Fields {
 			'email'    => __( 'Email', 'rtcl-account-fields' ),
 			'url'      => __( 'URL / Website', 'rtcl-account-fields' ),
 			'tel'      => __( 'Phone', 'rtcl-account-fields' ),
-			'select'   => __( 'Select (dropdown)', 'rtcl-account-fields' ),
-			'radio'    => __( 'Radio (single choice)', 'rtcl-account-fields' ),
-			'checkbox' => __( 'Checkboxes (multiple)', 'rtcl-account-fields' ),
+			'select'   => __( 'Dropdown', 'rtcl-account-fields' ),
+			'radio'    => __( 'Radio', 'rtcl-account-fields' ),
+			'checkbox' => __( 'Checkbox', 'rtcl-account-fields' ),
+			'switch'   => __( 'Switch', 'rtcl-account-fields' ),
 			'file'     => __( 'File upload', 'rtcl-account-fields' ),
 		];
 	}
@@ -82,7 +102,12 @@ class Fields {
 			'options'        => [],
 			'required'       => false,
 			'show_on_author' => true,
+			'show_on_register' => false,
 			'visible_for'    => 'all',
+			'file_ext'       => '',
+			'max_size'       => 0,
+			'min'            => '',
+			'max'            => '',
 		];
 	}
 
@@ -115,7 +140,12 @@ class Fields {
 			$field['options']        = is_array( $field['options'] ) ? $field['options'] : [];
 			$field['required']       = ! empty( $field['required'] );
 			$field['show_on_author'] = ! empty( $field['show_on_author'] );
+			$field['show_on_register'] = ! empty( $field['show_on_register'] );
 			$field['visible_for']    = in_array( $field['visible_for'], self::visibility_values(), true ) ? $field['visible_for'] : 'all';
+			$field['file_ext']       = implode( ', ', self::normalize_extensions( $field['file_ext'] ) );
+			$field['max_size']       = max( 0, (float) $field['max_size'] );
+			$field['min']            = self::normalize_number_setting( $field['min'] );
+			$field['max']            = self::normalize_number_setting( $field['max'] );
 			$fields[]                = $field;
 		}
 
@@ -284,11 +314,138 @@ class Fields {
 				'options'        => $options,
 				'required'       => ! empty( $raw['required'] ),
 				'show_on_author' => ! empty( $raw['show_on_author'] ),
+				'show_on_register' => ! empty( $raw['show_on_register'] ),
 				'visible_for'    => $visible_for,
+				'file_ext'       => implode( ', ', self::normalize_extensions( $raw['file_ext'] ?? '' ) ),
+				'max_size'       => isset( $raw['max_size'] ) ? max( 0, (float) $raw['max_size'] ) : 0,
+				'min'            => self::normalize_number_setting( $raw['min'] ?? '' ),
+				'max'            => self::normalize_number_setting( $raw['max'] ?? '' ),
 			];
 		}
 
 		return $clean;
+	}
+
+	/**
+	 * Normalize a numeric setting (min/max). Returns a clean numeric string, or
+	 * '' when the value is blank or non-numeric — '' meaning "no bound set".
+	 *
+	 * @param mixed $raw Raw value.
+	 *
+	 * @return string
+	 */
+	public static function normalize_number_setting( $raw ) {
+		$raw = is_string( $raw ) ? trim( $raw ) : $raw;
+		if ( '' === $raw || null === $raw || ! is_numeric( $raw ) ) {
+			return '';
+		}
+
+		return (string) ( 0 + $raw );
+	}
+
+	/**
+	 * Default maximum character length for a type when the admin sets none.
+	 *
+	 * @param string $type Field type.
+	 *
+	 * @return int 0 when the type has no default cap.
+	 */
+	public static function default_max_length( $type ) {
+		if ( 'textarea' === $type ) {
+			return 500;
+		}
+		if ( 'text' === $type ) {
+			return 150;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Minimum character length configured for a text/textarea field (0 = none).
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return int
+	 */
+	public static function length_min( array $field ) {
+		$min = isset( $field['min'] ) && '' !== $field['min'] ? (int) $field['min'] : 0;
+
+		return max( 0, $min );
+	}
+
+	/**
+	 * Effective maximum character length for a text/textarea field: the admin's
+	 * value, or the per-type default (text 150, textarea 500) when unset.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return int
+	 */
+	public static function length_max( array $field ) {
+		if ( isset( $field['max'] ) && '' !== $field['max'] && (int) $field['max'] > 0 ) {
+			return (int) $field['max'];
+		}
+
+		return self::default_max_length( $field['type'] );
+	}
+
+	/**
+	 * HTML5 constraint attributes for a field's input: min/max/step for number,
+	 * minlength/maxlength for text & textarea. Returns a pre-escaped attribute
+	 * string (leading space), ready to inject into the tag.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return string
+	 */
+	public static function html_constraint_attrs( array $field ) {
+		$attrs = '';
+
+		if ( 'number' === $field['type'] ) {
+			if ( isset( $field['min'] ) && '' !== $field['min'] ) {
+				$attrs .= ' min="' . esc_attr( $field['min'] ) . '"';
+			}
+			if ( isset( $field['max'] ) && '' !== $field['max'] ) {
+				$attrs .= ' max="' . esc_attr( $field['max'] ) . '"';
+			}
+			$attrs .= ' step="any"';
+		} elseif ( 'text' === $field['type'] || 'textarea' === $field['type'] ) {
+			$min = self::length_min( $field );
+			$max = self::length_max( $field );
+			if ( $min > 0 ) {
+				$attrs .= ' minlength="' . (int) $min . '"';
+			}
+			if ( $max > 0 ) {
+				$attrs .= ' maxlength="' . (int) $max . '"';
+			}
+		}
+
+		return $attrs;
+	}
+
+	/**
+	 * Normalize a raw "allowed file types" value (a comma/space/newline separated
+	 * string, or an array) into a clean list of lowercase extensions.
+	 *
+	 * @param mixed $raw Raw extensions value.
+	 *
+	 * @return string[] Clean, unique extensions (no leading dot), e.g. [ 'pdf', 'jpg' ].
+	 */
+	public static function normalize_extensions( $raw ) {
+		if ( is_string( $raw ) ) {
+			$raw = preg_split( '/[\s,]+/', $raw );
+		}
+		$exts = [];
+		foreach ( (array) $raw as $ext ) {
+			$ext = strtolower( trim( (string) $ext ) );
+			$ext = preg_replace( '/[^a-z0-9]/', '', ltrim( $ext, '.' ) );
+			if ( '' !== $ext ) {
+				$exts[] = $ext;
+			}
+		}
+
+		return array_values( array_unique( $exts ) );
 	}
 
 	/**
@@ -411,8 +568,9 @@ class Fields {
 			case 'url':
 				return esc_url_raw( $raw );
 
+			case 'switch':
 			case 'checkbox':
-				// Legacy single yes/no checkbox (no options configured).
+				// Single yes/no toggle (checkbox without options, or a switch).
 				return '' === $raw ? '' : '1';
 
 			case 'radio':
@@ -489,6 +647,30 @@ class Fields {
 					/* translators: %s: field label */
 					return sprintf( __( 'Please enter a valid number for %s.', 'rtcl-account-fields' ), $field['label'] );
 				}
+				$num = 0 + $value;
+				if ( isset( $field['min'] ) && '' !== $field['min'] && $num < (float) $field['min'] ) {
+					/* translators: 1: field label, 2: minimum value */
+					return sprintf( __( '%1$s must be at least %2$s.', 'rtcl-account-fields' ), $field['label'], $field['min'] );
+				}
+				if ( isset( $field['max'] ) && '' !== $field['max'] && $num > (float) $field['max'] ) {
+					/* translators: 1: field label, 2: maximum value */
+					return sprintf( __( '%1$s must be at most %2$s.', 'rtcl-account-fields' ), $field['label'], $field['max'] );
+				}
+				break;
+
+			case 'text':
+			case 'textarea':
+				$len = function_exists( 'mb_strlen' ) ? mb_strlen( $value ) : strlen( $value );
+				$min = self::length_min( $field );
+				$max = self::length_max( $field );
+				if ( $min > 0 && $len < $min ) {
+					/* translators: 1: field label, 2: minimum number of characters */
+					return sprintf( __( '%1$s must be at least %2$d characters.', 'rtcl-account-fields' ), $field['label'], $min );
+				}
+				if ( $max > 0 && $len > $max ) {
+					/* translators: 1: field label, 2: maximum number of characters */
+					return sprintf( __( '%1$s must be %2$d characters or fewer.', 'rtcl-account-fields' ), $field['label'], $max );
+				}
 				break;
 
 			case 'tel':
@@ -535,12 +717,199 @@ class Fields {
 	}
 
 	/**
+	 * A short, curated list of profile-relevant file types for the builder's
+	 * "Allowed file types" checkboxes — the common document/image formats a user
+	 * or company would attach (CV, brochure, logo, photo). Types the site does
+	 * not permit are omitted, and each entry carries every extension in its mime
+	 * group so ticking one covers all of them (e.g. JPG also allows .jpeg/.jpe).
+	 *
+	 * @return array<int,array{ext:string,exts:string[],label:string}>
+	 */
+	public static function available_file_types() {
+		/**
+		 * Curated types shown in the builder, in display order: primary extension
+		 * (the saved value) => label.
+		 *
+		 * @param array<string,string> $curated Extension => label.
+		 */
+		$curated = apply_filters(
+			'rtcl_acf_allowed_file_types',
+			[
+				'pdf'  => 'PDF',
+				'doc'  => 'DOC',
+				'docx' => 'DOCX',
+				'jpg'  => 'JPG',
+				'png'  => 'PNG',
+				'gif'  => 'GIF',
+				'webp' => 'WEBP',
+			]
+		);
+
+		$patterns = array_keys( self::allowed_file_mimes() );
+		$types    = [];
+
+		foreach ( $curated as $ext => $label ) {
+			$group = null;
+			foreach ( $patterns as $pattern ) {
+				$exts = explode( '|', $pattern );
+				if ( in_array( $ext, $exts, true ) ) {
+					$group = $exts;
+					break;
+				}
+			}
+			if ( null === $group ) {
+				continue; // Site does not permit this type — don't offer it.
+			}
+			$types[] = [
+				'ext'   => $ext,
+				'exts'  => $group,
+				'label' => $label,
+			];
+		}
+
+		return $types;
+	}
+
+	/**
 	 * Maximum upload size in bytes (respects PHP + WordPress limits).
 	 *
 	 * @return int
 	 */
 	public static function max_upload_size() {
 		return (int) wp_max_upload_size();
+	}
+
+	/**
+	 * Mime types accepted for a specific file field: the intersection of the
+	 * field's configured extensions with the site's own allow-list. When the
+	 * field sets no extensions, the full site allow-list is used.
+	 *
+	 * The site allow-list is always the outer bound, so a field can only ever
+	 * narrow what is accepted — never widen it to a type WordPress disallows.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return array<string,string> Map of extension pattern => mime type.
+	 */
+	public static function field_allowed_mimes( array $field ) {
+		$site = self::allowed_file_mimes();
+		$exts = self::normalize_extensions( isset( $field['file_ext'] ) ? $field['file_ext'] : '' );
+		if ( empty( $exts ) ) {
+			return $site;
+		}
+
+		$filtered = [];
+		foreach ( $site as $pattern => $mime ) {
+			if ( array_intersect( explode( '|', $pattern ), $exts ) ) {
+				$filtered[ $pattern ] = $mime;
+			}
+		}
+
+		return $filtered;
+	}
+
+	/**
+	 * The flat list of file extensions a field accepts, expanded from its mime
+	 * groups (so a field allowing "jpg" also accepts "jpeg"/"jpe"). Empty array
+	 * when the field places no extension restriction.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return string[]
+	 */
+	public static function field_allowed_extensions( array $field ) {
+		$exts = self::normalize_extensions( isset( $field['file_ext'] ) ? $field['file_ext'] : '' );
+		if ( empty( $exts ) ) {
+			return [];
+		}
+
+		$all = [];
+		foreach ( array_keys( self::field_allowed_mimes( $field ) ) as $pattern ) {
+			foreach ( explode( '|', $pattern ) as $ext ) {
+				$all[] = $ext;
+			}
+		}
+
+		return array_values( array_unique( $all ) );
+	}
+
+	/**
+	 * Effective maximum upload size in bytes for a specific field: the field's
+	 * own limit (in MB), or a sensible 1 MB default when it is empty/0. Always
+	 * capped by the site/PHP limit.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return int
+	 */
+	public static function field_max_upload_size( array $field ) {
+		$site = self::max_upload_size();
+		$mb   = isset( $field['max_size'] ) ? (float) $field['max_size'] : 0;
+		if ( $mb <= 0 ) {
+			$mb = 1; // Default 1 MB when no limit is set.
+		}
+
+		return min( (int) round( $mb * MB_IN_BYTES ), $site );
+	}
+
+	/**
+	 * Human-readable list of accepted extensions for a field, e.g. "pdf, jpg, png".
+	 * Falls back to the full site allow-list when the field sets no extensions.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return string
+	 */
+	public static function allowed_extensions_label( array $field ) {
+		$exts = self::normalize_extensions( isset( $field['file_ext'] ) ? $field['file_ext'] : '' );
+		if ( empty( $exts ) ) {
+			foreach ( array_keys( self::allowed_file_mimes() ) as $pattern ) {
+				foreach ( explode( '|', $pattern ) as $ext ) {
+					$exts[] = $ext;
+				}
+			}
+			$exts = array_values( array_unique( $exts ) );
+		}
+
+		return implode( ', ', $exts );
+	}
+
+	/**
+	 * Value for the file input's HTML "accept" attribute, e.g. ".pdf,.jpg,.png".
+	 * Empty when the field places no extension restriction.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return string
+	 */
+	public static function file_accept_attr( array $field ) {
+		$exts = self::normalize_extensions( isset( $field['file_ext'] ) ? $field['file_ext'] : '' );
+		if ( empty( $exts ) ) {
+			return '';
+		}
+
+		return '.' . implode( ',.', $exts );
+	}
+
+	/**
+	 * Short human hint describing a file field's constraints, e.g.
+	 * "Allowed: pdf, jpg · Max size: 2 MB".
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return string
+	 */
+	public static function file_constraints_hint( array $field ) {
+		$parts = [];
+		$exts  = self::normalize_extensions( isset( $field['file_ext'] ) ? $field['file_ext'] : '' );
+		if ( ! empty( $exts ) ) {
+			/* translators: %s: comma-separated list of file extensions */
+			$parts[] = sprintf( __( 'Allowed: %s', 'rtcl-account-fields' ), implode( ', ', $exts ) );
+		}
+		/* translators: %s: maximum file size, e.g. "2 MB" */
+		$parts[] = sprintf( __( 'Max size: %s', 'rtcl-account-fields' ), size_format( self::field_max_upload_size( $field ) ) );
+
+		return implode( ' · ', $parts );
 	}
 
 	/**
@@ -558,12 +927,14 @@ class Fields {
 		$removing = ! empty( $_POST[ self::FILE_REMOVE ][ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$error    = isset( $files['error'][ $key ] ) ? (int) $files['error'][ $key ] : UPLOAD_ERR_NO_FILE;
 
+		$max_size = self::field_max_upload_size( $field );
+
 		// A new file is being uploaded — validate it.
 		if ( UPLOAD_ERR_NO_FILE !== $error ) {
 			if ( UPLOAD_ERR_OK !== $error ) {
 				if ( UPLOAD_ERR_INI_SIZE === $error || UPLOAD_ERR_FORM_SIZE === $error ) {
 					/* translators: 1: field label, 2: max file size */
-					return sprintf( __( '%1$s is too large. Maximum size is %2$s.', 'rtcl-account-fields' ), $field['label'], size_format( self::max_upload_size() ) );
+					return sprintf( __( '%1$s is too large. Maximum size is %2$s.', 'rtcl-account-fields' ), $field['label'], size_format( $max_size ) );
 				}
 				/* translators: %s: field label */
 				return sprintf( __( 'The upload for %s failed. Please try again.', 'rtcl-account-fields' ), $field['label'] );
@@ -574,20 +945,20 @@ class Fields {
 				/* translators: %s: field label */
 				return sprintf( __( 'The uploaded file for %s is empty.', 'rtcl-account-fields' ), $field['label'] );
 			}
-			if ( $size > self::max_upload_size() ) {
+			if ( $size > $max_size ) {
 				/* translators: 1: field label, 2: max file size */
-				return sprintf( __( '%1$s is too large. Maximum size is %2$s.', 'rtcl-account-fields' ), $field['label'], size_format( self::max_upload_size() ) );
+				return sprintf( __( '%1$s is too large. Maximum size is %2$s.', 'rtcl-account-fields' ), $field['label'], size_format( $max_size ) );
 			}
 
 			$name    = isset( $files['name'][ $key ] ) ? sanitize_file_name( (string) $files['name'][ $key ] ) : '';
 			$tmp     = isset( $files['tmp_name'][ $key ] ) ? (string) $files['tmp_name'][ $key ] : '';
-			$allowed = self::allowed_file_mimes();
+			$allowed = self::field_allowed_mimes( $field );
 			$check   = wp_check_filetype_and_ext( $tmp, $name, $allowed );
 			$type    = ! empty( $check['type'] ) ? $check['type'] : '';
 
 			if ( '' === $type || ! in_array( $type, $allowed, true ) ) {
-				/* translators: %s: field label */
-				return sprintf( __( 'The file type for %s is not allowed.', 'rtcl-account-fields' ), $field['label'] );
+				/* translators: 1: field label, 2: allowed file types */
+				return sprintf( __( 'The file type for %1$s is not allowed. Accepted types: %2$s.', 'rtcl-account-fields' ), $field['label'], self::allowed_extensions_label( $field ) );
 			}
 			return '';
 		}
@@ -619,7 +990,7 @@ class Fields {
 		$remove   = ! empty( $_POST[ self::FILE_REMOVE ][ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		if ( self::has_upload( $field ) ) {
-			$attachment_id = self::handle_upload( $key, $user_id );
+			$attachment_id = self::handle_upload( $field, $user_id );
 			if ( is_wp_error( $attachment_id ) ) {
 				return $attachment_id;
 			}
@@ -644,16 +1015,17 @@ class Fields {
 	/**
 	 * Move a single uploaded file into the media library.
 	 *
-	 * @param string $key     Field id (index inside the $_FILES group).
-	 * @param int    $user_id Uploading user (used as attachment author).
+	 * @param array $field   Field definition (its id indexes the $_FILES group).
+	 * @param int   $user_id Uploading user (used as attachment author).
 	 *
 	 * @return int|\WP_Error Attachment id or error.
 	 */
-	private static function handle_upload( $key, $user_id ) {
+	private static function handle_upload( array $field, $user_id ) {
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 
+		$key   = $field['id'];
 		$group = $_FILES[ self::FILE_INPUT ]; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		// Rebuild the nested $_FILES entry as a flat single-file array.
@@ -671,7 +1043,7 @@ class Fields {
 			[ 'post_author' => (int) $user_id ],
 			[
 				'test_form' => false,
-				'mimes'     => self::allowed_file_mimes(),
+				'mimes'     => self::field_allowed_mimes( $field ),
 			]
 		);
 

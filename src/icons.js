@@ -29,6 +29,7 @@ export const IconSelect = () => svg( <><rect x="3" y="5" width="18" height="14" 
 export const IconCheckbox = () => svg( <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="m8 12 3 3 5-6" /></> );
 export const IconRadio = () => svg( <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" /></> );
 export const IconFile = () => svg( <><path d="M14 3v5h5" /><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M12 17v-5M9.5 14.5 12 12l2.5 2.5" /></> );
+export const IconSwitch = () => svg( <><rect x="2" y="7" width="20" height="10" rx="5" /><circle cx="16" cy="12" r="2.5" fill="currentColor" stroke="none" /></> );
 
 export const IconGrip = () => svg(
 	<><circle cx="9" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="18" r="1" /></>,
@@ -52,6 +53,7 @@ export const TYPE_ICONS = {
 	select: IconSelect,
 	radio: IconRadio,
 	checkbox: IconCheckbox,
+	switch: IconSwitch,
 	file: IconFile,
 };
 
@@ -65,5 +67,6 @@ export const TYPE_HINTS = {
 	select: 'Dropdown of options',
 	radio: 'Single choice from a list',
 	checkbox: 'One or more choices',
+	switch: 'On / off toggle',
 	file: 'File / image upload',
 };

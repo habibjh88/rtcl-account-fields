@@ -37,15 +37,70 @@ async function copyToClipboard( text ) {
 }
 
 const OPTION_TYPES = [ 'select', 'radio', 'checkbox' ];
-const NO_PLACEHOLDER = [ 'select', 'radio', 'checkbox', 'file' ];
+const NO_PLACEHOLDER = [ 'select', 'radio', 'checkbox', 'switch', 'file' ];
 const VISIBILITY = ( window.rtclAcf && window.rtclAcf.visibility ) || {
 	all: 'All (seller & buyer)',
 	seller: 'Seller',
 	buyer: 'Buyer',
 };
 
+// Available file types for the "Allowed file types" checkboxes (from the server).
+const FILE_TYPES = ( window.rtclAcf && window.rtclAcf.fileTypes ) || [];
+
 // Restrict a field key to valid meta-key characters.
 const sanitizeKey = ( s ) => s.toLowerCase().replace( /[^a-z0-9_]+/g, '_' ).replace( /^_+/, '' );
+
+// Parse a stored "file_ext" string ("pdf, jpg") into a lowercase extension set.
+const parseExts = ( value ) =>
+	new Set(
+		String( value || '' )
+			.toLowerCase()
+			.split( /[\s,]+/ )
+			.map( ( e ) => e.replace( /[^a-z0-9]/g, '' ) )
+			.filter( Boolean )
+	);
+
+/**
+ * Checkbox grid for the file field's allowed types. Toggling a group adds its
+ * primary extension or clears every extension it covers.
+ *
+ * @param {Object}   props
+ * @param {string}   props.value    Stored comma-separated extensions.
+ * @param {Function} props.onChange Called with the new comma-separated string.
+ * @return {JSX.Element} The grid.
+ */
+function FileTypePicker( { value, onChange } ) {
+	const selected = parseExts( value );
+
+	const toggle = ( type ) => {
+		const isOn = type.exts.some( ( e ) => selected.has( e ) );
+		const next = new Set( selected );
+		if ( isOn ) {
+			type.exts.forEach( ( e ) => next.delete( e ) );
+		} else {
+			next.add( type.ext );
+		}
+		onChange( Array.from( next ).join( ', ' ) );
+	};
+
+	if ( ! FILE_TYPES.length ) {
+		return null;
+	}
+
+	return (
+		<div className="rtcl-acf-filetypes">
+			{ FILE_TYPES.map( ( type ) => {
+				const isOn = type.exts.some( ( e ) => selected.has( e ) );
+				return (
+					<label key={ type.ext } className={ `rtcl-acf-filetypes__item${ isOn ? ' is-on' : '' }` }>
+						<input type="checkbox" checked={ isOn } onChange={ () => toggle( type ) } />
+						<span>{ type.label }</span>
+					</label>
+				);
+			} ) }
+		</div>
+	);
+}
 
 function Toggle( { checked, onChange, label, hint } ) {
 	return (
@@ -224,10 +279,87 @@ export default function SettingsPanel( { field, types, onChange, onClose, onRemo
 				) }
 
 				{ field.type === 'file' && (
+					<>
+						<div className="rtcl-acf-field">
+							<div className="rtcl-acf-note">
+								{ __( 'Users can upload a file or image. It is stored in the Media Library and can be shown on the author page.', 'rtcl-account-fields' ) }
+							</div>
+						</div>
+
+						<div className="rtcl-acf-field">
+							<label>{ __( 'Allowed file types', 'rtcl-account-fields' ) }</label>
+							<FileTypePicker
+								value={ field.file_ext || '' }
+								onChange={ ( file_ext ) => onChange( { file_ext } ) }
+							/>
+							<p className="rtcl-acf-field__hint">{ __( 'Tick the types users may upload. Leave all unticked to allow every type the site permits.', 'rtcl-account-fields' ) }</p>
+						</div>
+
+						<div className="rtcl-acf-field">
+							<label htmlFor="rtcl-acf-set-maxsize">{ __( 'Maximum file size (MB)', 'rtcl-account-fields' ) }</label>
+							<input
+								id="rtcl-acf-set-maxsize"
+								type="number"
+								min="0"
+								step="0.1"
+								value={ field.max_size ? String( field.max_size ) : '' }
+								onChange={ ( e ) => onChange( { max_size: e.target.value } ) }
+								placeholder={ __( '1', 'rtcl-account-fields' ) }
+							/>
+							<p className="rtcl-acf-field__hint">{ __( 'Leave empty (or 0) for a 1 MB limit. Cannot exceed the server limit.', 'rtcl-account-fields' ) }</p>
+						</div>
+					</>
+				) }
+
+				{ field.type === 'tel' && (
 					<div className="rtcl-acf-field">
 						<div className="rtcl-acf-note">
-							{ __( 'Users can upload a file or image. It is stored in the Media Library and can be shown on the author page.', 'rtcl-account-fields' ) }
+							{ __( 'Default country and allowed countries are inherited from Classified Listing → Settings → Misc → Phone. Change them there to update this field on the front-end.', 'rtcl-account-fields' ) }
 						</div>
+					</div>
+				) }
+
+				{ [ 'number', 'text', 'textarea' ].includes( field.type ) && (
+					<div className="rtcl-acf-field">
+						<label>
+							{ field.type === 'number'
+								? __( 'Value range', 'rtcl-account-fields' )
+								: __( 'Character length', 'rtcl-account-fields' ) }
+						</label>
+						<div className="rtcl-acf-minmax">
+							<input
+								className="rtcl-acf-minmax__input"
+								type="number"
+								step={ field.type === 'number' ? 'any' : '1' }
+								min={ field.type === 'number' ? undefined : '0' }
+								value={ field.min === undefined || field.min === null ? '' : String( field.min ) }
+								onChange={ ( e ) => onChange( { min: e.target.value } ) }
+								placeholder={ __( 'Min', 'rtcl-account-fields' ) }
+								aria-label={ __( 'Minimum', 'rtcl-account-fields' ) }
+							/>
+							<span className="rtcl-acf-minmax__sep">–</span>
+							<input
+								className="rtcl-acf-minmax__input"
+								type="number"
+								step={ field.type === 'number' ? 'any' : '1' }
+								min={ field.type === 'number' ? undefined : '0' }
+								value={ field.max === undefined || field.max === null ? '' : String( field.max ) }
+								onChange={ ( e ) => onChange( { max: e.target.value } ) }
+								placeholder={
+									field.type === 'text'
+										? '150'
+										: field.type === 'textarea'
+											? '500'
+											: __( 'Max', 'rtcl-account-fields' )
+								}
+								aria-label={ __( 'Maximum', 'rtcl-account-fields' ) }
+							/>
+						</div>
+						<p className="rtcl-acf-field__hint">
+							{ field.type === 'number'
+								? __( 'Values outside this range are rejected on submit. Leave a box empty for no bound.', 'rtcl-account-fields' )
+								: __( 'Min / max number of characters. Leave max empty to use the default (text 150, textarea 500).', 'rtcl-account-fields' ) }
+						</p>
 					</div>
 				) }
 
@@ -267,6 +399,14 @@ export default function SettingsPanel( { field, types, onChange, onClose, onRemo
 						label={ __( 'Show on author page', 'rtcl-account-fields' ) }
 						hint={ __( 'Display publicly on the author profile.', 'rtcl-account-fields' ) }
 					/>
+					{ field.type !== 'file' && (
+						<Toggle
+							checked={ field.show_on_register }
+							onChange={ ( v ) => onChange( { show_on_register: v } ) }
+							label={ __( 'Show on registration form', 'rtcl-account-fields' ) }
+							hint={ __( 'Also collect this field when a user registers.', 'rtcl-account-fields' ) }
+						/>
+					) }
 				</div>
 			</div>
 

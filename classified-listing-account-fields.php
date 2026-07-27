@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Classified Listing – Account Details Custom Fields
  * Plugin URI:        https://radiustheme.com/
- * Description:       Add-on for Classified Listing. Lets admins create extra custom fields for the front-end Account Details page and display them on the public author page.
+ * Description:       Add-on for Classified Listing. Lets admins create extra custom fields for the front-end Account Details page and display them on the public author page. Requires Classified Listing 6.0.0 or newer.
  * Version:           1.0.0
  * Requires PHP:      7.4
  * Requires at least: 6.6
@@ -30,17 +30,18 @@ define( 'RTCL_ACF_URL', plugin_dir_url( __FILE__ ) );
 add_action( 'plugins_loaded', 'rtcl_acf_bootstrap', 20 );
 
 /**
- * Bootstrap the add-on, but only when the base plugin is active.
+ * Bootstrap the add-on, but only when the base plugin dependency is satisfied.
  *
- * If the base plugin is deactivated the add-on stays completely dormant
- * (no hooks, no admin page) and shows a single admin notice instead.
+ * If Classified Listing is missing, inactive, or older than the required version
+ * (see Dependencies::MIN_RTCL), the add-on stays completely dormant — no hooks,
+ * no admin page — and shows an explanatory admin notice instead.
  *
  * @return void
  */
 function rtcl_acf_bootstrap() {
-	if ( ! function_exists( 'rtcl' ) || ! defined( 'RTCL_VERSION' ) ) {
-		add_action( 'admin_notices', 'rtcl_acf_missing_base_notice' );
+	require_once RTCL_ACF_PATH . 'includes/class-dependencies.php';
 
+	if ( ! \RtclAcf\Dependencies::instance()->met() ) {
 		return;
 	}
 
@@ -49,6 +50,7 @@ function rtcl_acf_bootstrap() {
 	require_once RTCL_ACF_PATH . 'includes/class-admin.php';
 	require_once RTCL_ACF_PATH . 'includes/class-frontend.php';
 	require_once RTCL_ACF_PATH . 'includes/class-profile.php';
+	require_once RTCL_ACF_PATH . 'includes/class-registration.php';
 
 	// Translations.
 	load_plugin_textdomain( 'rtcl-account-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
@@ -57,23 +59,5 @@ function rtcl_acf_bootstrap() {
 	new \RtclAcf\Admin();
 	new \RtclAcf\Frontend();
 	new \RtclAcf\Profile();
-}
-
-/**
- * Admin notice shown when the base "Classified Listing" plugin is not active.
- *
- * @return void
- */
-function rtcl_acf_missing_base_notice() {
-	if ( ! current_user_can( 'activate_plugins' ) ) {
-		return;
-	}
-	?>
-	<div class="notice notice-error">
-		<p>
-			<strong><?php esc_html_e( 'Classified Listing – Account Custom Fields', 'rtcl-account-fields' ); ?></strong>
-			<?php esc_html_e( 'requires the Classified Listing plugin to be installed and active.', 'rtcl-account-fields' ); ?>
-		</p>
-	</div>
-	<?php
+	new \RtclAcf\Registration();
 }

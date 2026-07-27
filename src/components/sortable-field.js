@@ -68,6 +68,11 @@ export default function SortableField( {
 							<IconEye /> { __( 'Author', 'rtcl-account-fields' ) }
 						</span>
 					) }
+					{ field.show_on_register && (
+						<span className="rtcl-acf-chip rtcl-acf-chip--register" title={ __( 'Shown on registration form', 'rtcl-account-fields' ) }>
+							{ __( 'Register', 'rtcl-account-fields' ) }
+						</span>
+					) }
 					{ field.visible_for && field.visible_for !== 'all' && (
 						<span className={ `rtcl-acf-chip rtcl-acf-chip--vis rtcl-acf-chip--${ field.visible_for }` } title={ __( 'Visible for account type', 'rtcl-account-fields' ) }>
 							{ VISIBILITY[ field.visible_for ] || field.visible_for }

@@ -36,6 +36,21 @@ class Profile {
 
 		// Allow file uploads: the core profile form is not multipart by default.
 		add_action( 'user_edit_form_tag', [ $this, 'form_enctype' ] );
+
+		// Field styles (switch toggle etc.) on the profile screens.
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+	}
+
+	/**
+	 * Enqueue field styles on the profile / edit-user screens only.
+	 *
+	 * @param string $hook Current admin page hook.
+	 */
+	public function enqueue( $hook ) {
+		if ( 'profile.php' !== $hook && 'user-edit.php' !== $hook ) {
+			return;
+		}
+		wp_enqueue_style( 'rtcl-acf-frontend', RTCL_ACF_URL . 'assets/css/frontend.css', [], RTCL_ACF_VERSION );
 	}
 
 	/**
@@ -110,11 +125,12 @@ class Profile {
 				switch ( $field['type'] ) {
 					case 'textarea':
 						printf(
-							'<textarea name="%1$s" id="%2$s" rows="5" class="regular-text" placeholder="%3$s"%4$s>%5$s</textarea>',
+							'<textarea name="%1$s" id="%2$s" rows="5" class="regular-text" placeholder="%3$s"%4$s%5$s>%6$s</textarea>',
 							esc_attr( $name ),
 							esc_attr( $input_id ),
 							esc_attr( $field['placeholder'] ),
 							$required, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- controlled static attribute.
+							Fields::html_constraint_attrs( $field ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped in helper.
 							esc_textarea( $scalar )
 						);
 						break;
@@ -171,6 +187,16 @@ class Profile {
 						}
 						break;
 
+					case 'switch':
+						printf(
+							'<label class="rtcl-acf-switch-field"><input type="hidden" name="%1$s" value=""><input type="checkbox" class="rtcl-acf-switch-input" name="%1$s" id="%2$s" value="1" %3$s><span class="rtcl-acf-switch-track"><span class="rtcl-acf-switch-thumb"></span></span><span class="rtcl-acf-switch-text">%4$s</span></label>',
+							esc_attr( $name ),
+							esc_attr( $input_id ),
+							checked( $scalar, '1', false ),
+							esc_html( $field['placeholder'] ? $field['placeholder'] : $field['label'] )
+						);
+						break;
+
 					case 'file':
 						$this->render_file_input( $field, (int) $scalar, $input_id );
 						break;
@@ -178,13 +204,14 @@ class Profile {
 					default:
 						$input_type = in_array( $field['type'], [ 'number', 'email', 'url', 'tel' ], true ) ? $field['type'] : 'text';
 						printf(
-							'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="regular-text" placeholder="%5$s"%6$s>',
+							'<input type="%1$s" name="%2$s" id="%3$s" value="%4$s" class="regular-text" placeholder="%5$s"%6$s%7$s>',
 							esc_attr( $input_type ),
 							esc_attr( $name ),
 							esc_attr( $input_id ),
 							esc_attr( $scalar ),
 							esc_attr( $field['placeholder'] ),
-							$required // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- controlled static attribute.
+							$required, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- controlled static attribute.
+							Fields::html_constraint_attrs( $field ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-escaped in helper.
 						);
 						break;
 				}
@@ -219,12 +246,15 @@ class Profile {
 				esc_html__( 'Remove', 'rtcl-account-fields' )
 			);
 		}
+		$accept = Fields::file_accept_attr( $field );
 		printf(
-			'<input type="file" name="%1$s[%2$s]" id="%3$s">',
+			'<input type="file" name="%1$s[%2$s]" id="%3$s"%4$s>',
 			esc_attr( Fields::FILE_INPUT ),
 			esc_attr( $field['id'] ),
-			esc_attr( $input_id )
+			esc_attr( $input_id ),
+			'' !== $accept ? ' accept="' . esc_attr( $accept ) . '"' : ''
 		);
+		echo '<p class="description rtcl-acf-file-hint">' . esc_html( Fields::file_constraints_hint( $field ) ) . '</p>';
 		echo '</div>';
 	}
 
@@ -247,7 +277,8 @@ class Profile {
 			return;
 		}
 
-		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? wp_unslash( $_POST[ self::INPUT ] ) : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in submitted().
+		// Raw (slashed) values: Fields::validate_value() unslashes once internally.
+		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in submitted(); unslashed + validated in Fields::validate_value().
 
 		foreach ( Fields::all() as $field ) {
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
@@ -276,7 +307,9 @@ class Profile {
 			return;
 		}
 
-		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? wp_unslash( $_POST[ self::INPUT ] ) : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in submitted().
+		// Raw (slashed) values: Fields::sanitize_value() unslashes once internally.
+		// Pre-unslashing here would double-unslash and corrupt stored values.
+		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in submitted(); unslashed + sanitized in Fields::sanitize_value().
 
 		foreach ( Fields::all() as $field ) {
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
