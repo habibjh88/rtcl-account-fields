@@ -362,6 +362,37 @@ class Fields {
 	}
 
 	/**
+	 * Default maximum *value* for a number field when the admin sets no max.
+	 *
+	 * Without an upper bound a user can submit an absurdly large value (e.g.
+	 * 1e79) which PHP then stores in scientific notation. We cap at the signed
+	 * 32-bit integer max — the conventional MySQL `INT` ceiling — which is large
+	 * enough for real input yet reads cleanly in the validation message.
+	 *
+	 * @return int
+	 */
+	public static function default_max_number() {
+		// Signed 32-bit integer max (MySQL INT), ~2.1 billion.
+		return 2147483647;
+	}
+
+	/**
+	 * Effective maximum value for a number field: the admin's value, or the
+	 * default cap ({@see default_max_number()}) when left unset.
+	 *
+	 * @param array $field Field definition.
+	 *
+	 * @return float
+	 */
+	public static function number_max( array $field ) {
+		if ( isset( $field['max'] ) && '' !== $field['max'] ) {
+			return (float) $field['max'];
+		}
+
+		return self::default_max_number();
+	}
+
+	/**
 	 * Minimum character length configured for a text/textarea field (0 = none).
 	 *
 	 * @param array $field Field definition.
@@ -406,9 +437,8 @@ class Fields {
 			if ( isset( $field['min'] ) && '' !== $field['min'] ) {
 				$attrs .= ' min="' . esc_attr( $field['min'] ) . '"';
 			}
-			if ( isset( $field['max'] ) && '' !== $field['max'] ) {
-				$attrs .= ' max="' . esc_attr( $field['max'] ) . '"';
-			}
+			$max = self::number_max( $field );
+			$attrs .= ' max="' . esc_attr( $max ) . '"';
 			$attrs .= ' step="any"';
 		} elseif ( 'text' === $field['type'] || 'textarea' === $field['type'] ) {
 			$min = self::length_min( $field );
@@ -652,9 +682,10 @@ class Fields {
 					/* translators: 1: field label, 2: minimum value */
 					return sprintf( __( '%1$s must be at least %2$s.', 'rtcl-account-fields' ), $field['label'], $field['min'] );
 				}
-				if ( isset( $field['max'] ) && '' !== $field['max'] && $num > (float) $field['max'] ) {
+				$max = self::number_max( $field );
+				if ( $num > $max ) {
 					/* translators: 1: field label, 2: maximum value */
-					return sprintf( __( '%1$s must be at most %2$s.', 'rtcl-account-fields' ), $field['label'], $field['max'] );
+					return sprintf( __( '%1$s must be at most %2$s.', 'rtcl-account-fields' ), $field['label'], $max );
 				}
 				break;
 
