@@ -1,5 +1,5 @@
 {
-  "name": "classified-listing-account-fields",
+  "name": "rtcl-account-fields",
   "version": "1.0.0",
   "description": "React form builder for the Classified Listing – Account Custom Fields add-on.",
   "author": "RadiusTheme",
@@ -10,10 +10,10 @@
     "start": "wp-scripts start",
     "lint:js": "wp-scripts lint-js src",
     "format": "wp-scripts format src",
-    "zip": "npm run build && wp-scripts plugin-zip --root-folder=classified-listing-account-fields"
+    "zip": "npm run build && wp-scripts plugin-zip --root-folder=rtcl-account-fields && node -e \"const fs=require('fs'),v=require('./package.json').version;fs.renameSync('rtcl-account-fields.zip','rtcl-account-fields.'+v+'.zip')\""
   },
   "files": [
-    "classified-listing-account-fields.php",
+    "rtcl-account-fields.php",
     "index.php",
     "includes",
     "build",

@@ -67,8 +67,8 @@ They meet in one place: a WordPress **option** in the database (see §4).
 ## 3. Where everything lives (the map)
 
 ```
-classified-listing-account-fields/
-├─ classified-listing-account-fields.php   ← plugin entry / bootstrap
+rtcl-account-fields/
+├─ rtcl-account-fields.php   ← plugin entry / bootstrap
 ├─ includes/                               ← B) THE RUNTIME (+ the REST API)
 │  ├─ class-fields.php     ← the brain: definitions, sanitize, validate
 │  ├─ class-rest.php       ← REST API the builder talks to
@@ -402,7 +402,7 @@ it directly (but bump the cache, or hard-refresh, since it's versioned by plugin
 
 ## 10. Boot & the hard dependency (one more thing to know)
 
-The entry file `classified-listing-account-fields.php` boots on `plugins_loaded` at
+The entry file `rtcl-account-fields.php` boots on `plugins_loaded` at
 **priority 20** — after the base Classified Listing plugin (priority 10) — so the base's
 functions are guaranteed available.
 

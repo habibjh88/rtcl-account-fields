@@ -33,7 +33,7 @@ npm run zip      # build + package a distributable plugin zip
 ```
 
 `npm run zip` runs a production build and then bundles the plugin into
-`classified-listing-account-fields.zip` (runtime files only — `node_modules`,
+`rtcl-account-fields.zip` (runtime files only — `node_modules`,
 `src`, and build config are excluded). The zip installs via **Plugins → Add New →
 Upload Plugin**.
 
@@ -74,3 +74,16 @@ to your override so the custom fields display there too.
 
 Copy this folder into `wp-content/plugins/` and activate it (requires the
 Classified Listing base plugin to be active).
+
+## Changelog
+
+### 1.0.0
+
+- Initial release.
+- React drag-and-drop form builder under **Classified Listing → Account Fields**.
+- 11 field types: text, textarea, number, email, URL, phone, dropdown, radio, checkbox, switch, and file upload.
+- Fields render, validate, and save on the front-end **Account Details** form, the **registration** form, and the WordPress **user profile** screens.
+- Optional display of each field on the public **author page**, formatted per type.
+- Per-field settings: label, description, placeholder, required, options, min/max, buyer/seller visibility, and file type/size limits.
+- Full server-side validation and sanitization for every field type.
+- License key + automatic updates via **Classified Listing → Tools → Licensing**.

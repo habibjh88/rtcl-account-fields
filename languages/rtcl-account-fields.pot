@@ -15,32 +15,32 @@ msgstr ""
 "X-Domain: rtcl-account-fields\n"
 
 #. Plugin Name of the plugin
-#: classified-listing-account-fields.php
-#: classified-listing-account-fields.php:70
+#: rtcl-account-fields.php
+#: rtcl-account-fields.php:70
 msgid "Classified Listing – Account Custom Fields"
 msgstr ""
 
 #. Plugin URI of the plugin
-#: classified-listing-account-fields.php
+#: rtcl-account-fields.php
 msgid "https://radiustheme.com/"
 msgstr ""
 
 #. Description of the plugin
-#: classified-listing-account-fields.php
+#: rtcl-account-fields.php
 msgid "Add-on for Classified Listing. Lets admins create extra custom fields for the front-end Account Details page and display them on the public author page."
 msgstr ""
 
 #. Author of the plugin
-#: classified-listing-account-fields.php
+#: rtcl-account-fields.php
 msgid "RadiusTheme"
 msgstr ""
 
 #. Author URI of the plugin
-#: classified-listing-account-fields.php
+#: rtcl-account-fields.php
 msgid "https://radiustheme.com"
 msgstr ""
 
-#: classified-listing-account-fields.php:71
+#: rtcl-account-fields.php:71
 msgid "requires the Classified Listing plugin to be installed and active."
 msgstr ""
 

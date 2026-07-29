@@ -18,14 +18,14 @@ npm run build        # production build → build/
 npm run start        # watch mode
 npm run lint:js      # ESLint over src/
 npm run format       # format src/
-npm run zip          # production build + package classified-listing-account-fields.zip
+npm run zip          # production build + package rtcl-account-fields.zip
 ```
 
 There is no PHP or JS test suite. Verify PHP changes against a live WordPress install with the base plugin active.
 
 ## Architecture
 
-### Boot & hard dependency (`classified-listing-account-fields.php`)
+### Boot & hard dependency (`rtcl-account-fields.php`)
 Boots on `plugins_loaded` at **priority 20** (base plugin boots at 10) so `rtcl()`/`RTCL_VERSION` are guaranteed present. If the base plugin is absent, the add-on stays **completely dormant** — no classes load, no hooks register — and only shows an admin notice. Preserve this: never register hooks or load classes outside `rtcl_acf_bootstrap()`.
 
 ### `includes/class-fields.php` — the core

@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       Classified Listing – Account Details Custom Fields
+ * Plugin Name:       Classified Listing – Account Fields Manager
  * Plugin URI:        https://radiustheme.com/
- * Description:       Add-on for Classified Listing. Lets admins create extra custom fields for the front-end Account Details page and display them on the public author page. Requires Classified Listing 6.0.0 or newer.
+ * Description:       Add-on for Classified Listing. Build extra custom fields with a drag-and-drop editor and show them on the registration form, the front-end Account Details page, the WordPress user profile screens, and the public author page. Requires Classified Listing 6.0.0 or newer.
  * Version:           1.0.0
  * Requires PHP:      7.4
  * Requires at least: 6.6
@@ -14,6 +14,7 @@
  *
  * @package RtclAcf
  */
+
 
 defined( 'ABSPATH' ) || exit;
 
@@ -51,13 +52,27 @@ function rtcl_acf_bootstrap() {
 	require_once RTCL_ACF_PATH . 'includes/class-frontend.php';
 	require_once RTCL_ACF_PATH . 'includes/class-profile.php';
 	require_once RTCL_ACF_PATH . 'includes/class-registration.php';
+	require_once RTCL_ACF_PATH . 'includes/class-license.php';
 
-	// Translations.
-	load_plugin_textdomain( 'rtcl-account-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+	// Translations. Must load on `init` or later (WordPress 6.7+ warns if earlier).
+	add_action( 'init', 'rtcl_acf_load_textdomain' );
 
 	new \RtclAcf\Rest();
 	new \RtclAcf\Admin();
 	new \RtclAcf\Frontend();
 	new \RtclAcf\Profile();
 	new \RtclAcf\Registration();
+	new \RtclAcf\License();
+}
+
+/**
+ * Load the plugin's bundled translations.
+ *
+ * Hooked to `init` (not `plugins_loaded`) because WordPress 6.7+ warns when a
+ * text domain is loaded before `init`.
+ *
+ * @return void
+ */
+function rtcl_acf_load_textdomain() {
+	load_plugin_textdomain( 'rtcl-account-fields', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
