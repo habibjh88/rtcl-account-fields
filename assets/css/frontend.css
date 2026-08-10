@@ -23,6 +23,23 @@
 	margin-top: 10px;
 }
 
+/* --- Store profile form section (always single column) ------------------ */
+.rtcl-acf-store-wrap {
+	margin-top: 10px;
+	clear: both;
+}
+
+.rtcl-acf-store-wrap .rtcl-form-group {
+	width: 100%;
+	float: none;
+	display: block;
+}
+
+/* --- Store "More details" popup fields ---------------------------------- */
+.rtcl-acf-store-item .rtcl-acf-store-value {
+	word-break: break-word;
+}
+
 .rtcl-acf-section-title.rtcl-acf-section-title {
 	margin: 24px 0 16px;
 	padding-top: 20px;

@@ -52,6 +52,7 @@ function rtcl_acf_bootstrap() {
 	require_once RTCL_ACF_PATH . 'includes/class-frontend.php';
 	require_once RTCL_ACF_PATH . 'includes/class-profile.php';
 	require_once RTCL_ACF_PATH . 'includes/class-registration.php';
+	require_once RTCL_ACF_PATH . 'includes/class-store.php';
 	require_once RTCL_ACF_PATH . 'includes/class-license.php';
 
 	// Translations. Must load on `init` or later (WordPress 6.7+ warns if earlier).
@@ -62,6 +63,7 @@ function rtcl_acf_bootstrap() {
 	new \RtclAcf\Frontend();
 	new \RtclAcf\Profile();
 	new \RtclAcf\Registration();
+	new \RtclAcf\Store();
 	new \RtclAcf\License();
 }
 

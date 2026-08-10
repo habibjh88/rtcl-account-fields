@@ -8,6 +8,15 @@ import { TYPE_ICONS, IconText, IconGrip, IconTrash, IconStar, IconEye } from '..
 
 const VISIBILITY = ( window.rtclAcf && window.rtclAcf.visibility ) || { seller: 'Seller', buyer: 'Buyer' };
 
+// Compact chips summarizing which contexts a field is shown in, in display order.
+const CONTEXT_CHIPS = [
+	{ key: 'show_on_user_profile', mod: 'user', short: __( 'User', 'rtcl-account-fields' ), title: __( 'Editable on the user profile', 'rtcl-account-fields' ), icon: false },
+	{ key: 'show_on_user_frontend', mod: 'author', short: __( 'Author', 'rtcl-account-fields' ), title: __( 'Shown on the author page', 'rtcl-account-fields' ), icon: true },
+	{ key: 'show_on_store_profile', mod: 'store', short: __( 'Store', 'rtcl-account-fields' ), title: __( 'Editable on the store profile', 'rtcl-account-fields' ), icon: false },
+	{ key: 'show_on_store_frontend', mod: 'storefront', short: __( 'Store page', 'rtcl-account-fields' ), title: __( 'Shown in the store details popup', 'rtcl-account-fields' ), icon: true },
+	{ key: 'show_on_registration', mod: 'register', short: __( 'Register', 'rtcl-account-fields' ), title: __( 'Collected on registration', 'rtcl-account-fields' ), icon: false },
+];
+
 export default function SortableField( {
 	field,
 	typeLabel,
@@ -63,16 +72,13 @@ export default function SortableField( {
 							<IconStar /> { __( 'Required', 'rtcl-account-fields' ) }
 						</span>
 					) }
-					{ field.show_on_author && (
-						<span className="rtcl-acf-chip rtcl-acf-chip--author" title={ __( 'Shown on author page', 'rtcl-account-fields' ) }>
-							<IconEye /> { __( 'Author', 'rtcl-account-fields' ) }
-						</span>
-					) }
-					{ field.show_on_register && (
-						<span className="rtcl-acf-chip rtcl-acf-chip--register" title={ __( 'Shown on registration form', 'rtcl-account-fields' ) }>
-							{ __( 'Register', 'rtcl-account-fields' ) }
-						</span>
-					) }
+					{ CONTEXT_CHIPS.map( ( c ) => (
+						field[ c.key ] ? (
+							<span key={ c.key } className={ `rtcl-acf-chip rtcl-acf-chip--${ c.mod }` } title={ c.title }>
+								{ c.icon ? <IconEye /> : null } { c.short }
+							</span>
+						) : null
+					) ) }
 					{ field.visible_for && field.visible_for !== 'all' && (
 						<span className={ `rtcl-acf-chip rtcl-acf-chip--vis rtcl-acf-chip--${ field.visible_for }` } title={ __( 'Visible for account type', 'rtcl-account-fields' ) }>
 							{ VISIBILITY[ field.visible_for ] || field.visible_for }

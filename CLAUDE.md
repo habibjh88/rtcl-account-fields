@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A WordPress **add-on plugin** for the base **Classified Listing** plugin. It lets admins define extra custom fields (via a React drag-and-drop builder) that render on the front-end **Account Details** form, the WordPress **user-profile** screens, and the public **author page**.
+A WordPress **add-on plugin** for the base **Classified Listing** plugin. It lets admins define extra custom fields (via a React drag-and-drop builder) and choose, per field, which of **five surfaces** each one appears on (see "Per-context visibility" below).
 
 Text domain: `rtcl-account-fields`. PHP namespace: `RtclAcf`. All constants/options/meta are prefixed `RTCL_ACF_` / `rtcl_acf_` / `_rtcl_acf_`.
 
@@ -36,11 +36,25 @@ Static repository + the single source of truth for field shape, sanitization, an
 - Field types: `text, textarea, number, email, url, tel, select, radio, checkbox, file`. `checkbox` with options is **multi-value** (stored as an array); without options it's a single yes/no. `select`/`radio`/`checkbox` are the "option types". `file` stores an attachment id and is handled separately (uploads need `$_FILES`, so it bypasses the normal value pipeline).
 - `visible_for` (`all`/`seller`/`buyer`) gates a field by the user's Classified Listing account type (`_rtcl_user_type`). Unknown type shows everything (fail-open). Always guard render/validate/save with `field_visible_for_user()` so hidden fields are never validated or wiped.
 
+### Per-context visibility (the five switches)
+Each field carries five independent booleans (`Fields::context_keys()`), orthogonal to `visible_for`:
+
+| Key | Surface | Kind | Gated in |
+| --- | --- | --- | --- |
+| `show_on_user_profile` | Account Details form **and** wp-admin profile | edit | `class-frontend.php`, `class-profile.php` |
+| `show_on_user_frontend` | public author page | display | `class-frontend.php` (`render_author_fields`) |
+| `show_on_store_profile` | store settings form (My Account → Store) | edit | `class-store.php` |
+| `show_on_store_frontend` | single-store "More details" popup | display | `class-store.php` |
+| `show_on_registration` | registration form | edit | `class-registration.php` |
+
+**Storage differs by context.** User contexts (profile / author / registration) store per-**user** meta (`_rtcl_acf_<id>` via `get_user_meta`). Store contexts store per-**store-post** meta (same key via `get_post_meta` on the store post) — a store is a post, so its values belong to the store, not the owner user. A field enabled on both Account Details and Store profile therefore holds two independent values. The storage helpers are parameterized by object type: `Fields::object_value_raw($type,$id,$field)`, `save_file_field($field,$id,$type,$author)`, `validate_file($field,$id,$type)` accept `'user'` or `'post'` (defaulting to `'user'` so existing callers are unchanged). New fields default to `user_profile` only (author/store/registration are opt-in); legacy fields are migrated in `Fields::resolve_visibility()` (old `show_on_author`→`show_on_user_frontend`, `show_on_register`→`show_on_registration`, `user_profile`=true). Every edit surface must gate render **and** validate **and** save on its context key so a form never wipes a value it didn't render. `Fields::format_public_value()` / `format_file_value()` are the shared per-type display escapers (author page + store popup); `Fields::enqueue_phone_widget()` / `phone_widget_config()` load the base intl-phone widget for `tel` fields on any surface.
+
 ### Integration surfaces (each a separate class, all instantiated in bootstrap)
 - **`class-admin.php`** — registers the submenu under `rtcl-admin`, enqueues the built React bundle on its page only, and injects the `window.rtclAcf` bootstrap object (fields, types, defaults, visibility labels, REST namespace). Themes the builder with the base plugin's primary color via inline CSS vars.
 - **`class-rest.php`** — `rtcl-acf/v1/fields` GET/POST, `manage_options` only. POST replaces the **whole** collection with a normalized copy (bulk save; there is no per-field endpoint).
 - **`class-frontend.php`** — front-end account form + public author page. Integrates purely through **base-plugin hooks** (see table below), so it adds nothing when the base is inactive. Both `validate()` and `save()` gate on `submitted()` so a theme that drops the form section can't cause required-field errors or wipe stored values.
 - **`class-profile.php`** — the same fields on `profile.php` / `user-edit.php`, using standard WP profile hooks. This path is **nonce-protected** (`rtcl_acf_profile`); the front-end path relies on the base plugin's own nonce/auth.
+- **`class-store.php`** — the two **Store** contexts. Only wires up when the Store add-on is active (`class_exists('\RtclStore\Models\Store')`). Renders on the store settings form via `rtcl_store_my_account_form_end` (reusing `Frontend::render_account_field()`), validates via the `rtcl_store_mata_data_before_update` filter (emits the store handler's JSON error + exits to block the save), saves to the owner's user meta on `rtcl_store_meta_data_saved`, and displays on the popup via `rtcl_store_details_modal_after_meta`. That last hook is **the only edit to the Store plugin** — a single additive `do_action()` in `classified-listing-store/templates/store/details-modal.php` (mirrors the base's `rtcl_author_details_after_meta`).
 
 ### Base-plugin hooks used (front-end)
 | Purpose | Hook |

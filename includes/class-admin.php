@@ -98,6 +98,7 @@ class Admin {
 					'types'         => Fields::types(),
 					'defaults'      => Fields::defaults(),
 					'visibility'    => $this->visibility_labels(),
+					'contexts'      => $this->context_labels(),
 					'fileTypes'     => Fields::available_file_types(),
 				]
 			) . ';',
@@ -208,6 +209,37 @@ class Admin {
 			'all'    => __( 'All (seller & buyer)', 'rtcl-account-fields' ),
 			'seller' => $seller,
 			'buyer'  => $buyer,
+		];
+	}
+
+	/**
+	 * Labels + hints for the five per-context visibility switches shown in the
+	 * builder's settings panel. Keys match Fields::context_keys().
+	 *
+	 * @return array<string,array{label:string,hint:string}>
+	 */
+	private function context_labels() {
+		return [
+			'show_on_user_profile'   => [
+				'label' => __( 'User profile', 'rtcl-account-fields' ),
+				'hint'  => __( 'Editable on the Account Details form and the WordPress profile screen.', 'rtcl-account-fields' ),
+			],
+			'show_on_user_frontend'  => [
+				'label' => __( 'User front-end (author page)', 'rtcl-account-fields' ),
+				'hint'  => __( 'Displayed publicly on the author profile page.', 'rtcl-account-fields' ),
+			],
+			'show_on_store_profile'  => [
+				'label' => __( 'Store profile', 'rtcl-account-fields' ),
+				'hint'  => __( 'Editable on the store settings form (My Account → Store).', 'rtcl-account-fields' ),
+			],
+			'show_on_store_frontend' => [
+				'label' => __( 'Store front-end', 'rtcl-account-fields' ),
+				'hint'  => __( 'Displayed in the single store “More details” popup.', 'rtcl-account-fields' ),
+			],
+			'show_on_registration'   => [
+				'label' => __( 'Registration form', 'rtcl-account-fields' ),
+				'hint'  => __( 'Also collected when a user registers.', 'rtcl-account-fields' ),
+			],
 		];
 	}
 

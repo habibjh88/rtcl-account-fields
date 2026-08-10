@@ -44,6 +44,19 @@ const VISIBILITY = ( window.rtclAcf && window.rtclAcf.visibility ) || {
 	buyer: 'Buyer',
 };
 
+// The five per-context visibility switches (label + hint), from the server.
+const CONTEXTS = ( window.rtclAcf && window.rtclAcf.contexts ) || {
+	show_on_user_profile: { label: 'User profile', hint: 'Editable on the Account Details form and the WordPress profile screen.' },
+	show_on_user_frontend: { label: 'User front-end (author page)', hint: 'Displayed publicly on the author profile page.' },
+	show_on_store_profile: { label: 'Store profile', hint: 'Editable on the store settings form (My Account → Store).' },
+	show_on_store_frontend: { label: 'Store front-end', hint: 'Displayed in the single store “More details” popup.' },
+	show_on_registration: { label: 'Registration form', hint: 'Also collected when a user registers.' },
+};
+
+// Contexts that never apply to a file field (uploads can't ride the registration
+// form, which has no user/attachment context yet).
+const CONTEXT_NOT_FOR_FILE = [ 'show_on_registration' ];
+
 // Available file types for the "Allowed file types" checkboxes (from the server).
 const FILE_TYPES = ( window.rtclAcf && window.rtclAcf.fileTypes ) || [];
 
@@ -393,20 +406,32 @@ export default function SettingsPanel( { field, types, onChange, onClose, onRemo
 						label={ __( 'Required', 'rtcl-account-fields' ) }
 						hint={ __( 'User must fill this in.', 'rtcl-account-fields' ) }
 					/>
-					<Toggle
-						checked={ field.show_on_author }
-						onChange={ ( v ) => onChange( { show_on_author: v } ) }
-						label={ __( 'Show on author page', 'rtcl-account-fields' ) }
-						hint={ __( 'Display publicly on the author profile.', 'rtcl-account-fields' ) }
-					/>
-					{ field.type !== 'file' && (
-						<Toggle
-							checked={ field.show_on_register }
-							onChange={ ( v ) => onChange( { show_on_register: v } ) }
-							label={ __( 'Show on registration form', 'rtcl-account-fields' ) }
-							hint={ __( 'Also collect this field when a user registers.', 'rtcl-account-fields' ) }
-						/>
-					) }
+				</div>
+
+				<div className="rtcl-acf-field rtcl-acf-visibility">
+					<label className="rtcl-acf-visibility__title">
+						{ __( 'Visibility', 'rtcl-account-fields' ) }
+					</label>
+					<p className="rtcl-acf-visibility__desc">
+						{ __( 'Choose where this field appears. Each surface is independent.', 'rtcl-account-fields' ) }
+					</p>
+					<div className="rtcl-acf-toggles">
+						{ Object.keys( CONTEXTS ).map( ( key ) => {
+							if ( field.type === 'file' && CONTEXT_NOT_FOR_FILE.includes( key ) ) {
+								return null;
+							}
+							const ctx = CONTEXTS[ key ] || {};
+							return (
+								<Toggle
+									key={ key }
+									checked={ !! field[ key ] }
+									onChange={ ( v ) => onChange( { [ key ]: v } ) }
+									label={ ctx.label || key }
+									hint={ ctx.hint || '' }
+								/>
+							);
+						} ) }
+					</div>
 				</div>
 			</div>
 

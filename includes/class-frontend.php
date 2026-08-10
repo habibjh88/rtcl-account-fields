@@ -66,7 +66,10 @@ class Frontend {
 			array_filter(
 				Fields::all(),
 				static function ( $field ) use ( $user_id ) {
-					return Fields::field_visible_for_user( $field, $user_id );
+					// Only fields opted into the "User profile" context render on the
+					// account editor; account-type visibility still applies on top.
+					return ! empty( $field['show_on_user_profile'] )
+						&& Fields::field_visible_for_user( $field, $user_id );
 				}
 			)
 		);
@@ -79,9 +82,9 @@ class Frontend {
 		</h3>
 		<div class="rtcl-form-group-wrap rtcl-acf-account-wrap">
 			<?php foreach ( $fields as $field ) : ?>
-				<?php $this->render_account_field( $field, Fields::user_value_raw( $user_id, $field ) ); ?>
+				<?php self::render_account_field( $field, Fields::user_value_raw( $user_id, $field ) ); ?>
 			<?php endforeach; ?>
-			<?php if ( $this->has_file_field( $fields ) ) : ?>
+			<?php if ( self::has_file_field( $fields ) ) : ?>
 				<script>( function () { var s = document.currentScript; var f = s && s.closest( 'form' ); if ( f ) { f.setAttribute( 'enctype', 'multipart/form-data' ); } } )();</script>
 			<?php endif; ?>
 		</div>
@@ -95,7 +98,7 @@ class Frontend {
 	 *
 	 * @return bool
 	 */
-	private function has_file_field( array $fields ) {
+	public static function has_file_field( array $fields ) {
 		foreach ( $fields as $field ) {
 			if ( 'file' === $field['type'] ) {
 				return true;
@@ -107,10 +110,13 @@ class Frontend {
 	/**
 	 * Render a single field row for the account form (matches base markup).
 	 *
+	 * Public + static so the store profile form (class-store.php) can reuse the
+	 * exact same markup and input names (`rtcl_acf[<id>]`) as Account Details.
+	 *
 	 * @param array  $field Field definition.
 	 * @param string $value Current stored value.
 	 */
-	private function render_account_field( array $field, $value ) {
+	public static function render_account_field( array $field, $value ) {
 		$input_id = 'rtcl-acf-' . $field['id'];
 		$name     = self::INPUT . '[' . $field['id'] . ']';
 		$required = $field['required'] ? ' required="required"' : '';
@@ -200,7 +206,7 @@ class Frontend {
 						break;
 
 					case 'file':
-						$this->render_file_input( $field, (int) $scalar, $input_id );
+						self::render_file_input( $field, (int) $scalar, $input_id );
 						break;
 
 					case 'tel':
@@ -252,7 +258,7 @@ class Frontend {
 	 * @param int    $att_id   Current attachment id (0 when none).
 	 * @param string $input_id DOM id for the input.
 	 */
-	private function render_file_input( array $field, $att_id, $input_id ) {
+	public static function render_file_input( array $field, $att_id, $input_id ) {
 		$url = $att_id ? wp_get_attachment_url( $att_id ) : '';
 		echo '<div class="rtcl-acf-file">';
 		if ( $url ) {
@@ -319,6 +325,10 @@ class Frontend {
 		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- unslashed + validated in Fields::validate_value().
 
 		foreach ( Fields::all() as $field ) {
+			// Only fields shown on the account editor are submitted here.
+			if ( empty( $field['show_on_user_profile'] ) ) {
+				continue;
+			}
 			// Never validate a field the user's account type can't see.
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
 				continue;
@@ -372,6 +382,11 @@ class Frontend {
 		$user_id   = $this->resolve_user_id( $user );
 
 		foreach ( Fields::all() as $field ) {
+			// Only fields shown on the account editor belong to this form; skip the
+			// rest so we never wipe a value the account form never rendered.
+			if ( empty( $field['show_on_user_profile'] ) ) {
+				continue;
+			}
 			// Skip fields hidden from this user's account type — don't wipe them.
 			if ( $user_id && ! Fields::field_visible_for_user( $field, $user_id ) ) {
 				continue;
@@ -423,7 +438,7 @@ class Frontend {
 
 		$rows = [];
 		foreach ( Fields::all() as $field ) {
-			if ( ! $field['show_on_author'] ) {
+			if ( empty( $field['show_on_user_frontend'] ) ) {
 				continue;
 			}
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
@@ -444,71 +459,14 @@ class Frontend {
 			<?php foreach ( $rows as $row ) : ?>
 				<div class="rtcl-acf-author-item rtcl-acf-author-<?php echo esc_attr( $row['field']['type'] ); ?>">
 					<span class="rtcl-acf-author-label"><?php echo esc_html( $row['field']['label'] ); ?></span>
-					<span class="rtcl-acf-author-value"><?php echo $this->format_author_value( $row['field'], $row['value'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped per branch below. ?></span>
+					<span class="rtcl-acf-author-value"><?php echo Fields::format_public_value( $row['field'], $row['value'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped per type in Fields::format_public_value(). ?></span>
 				</div>
 			<?php endforeach; ?>
 		</div>
 		<?php
 	}
 
-	/**
-	 * Format a value for public display, safely escaped per type.
-	 *
-	 * @param array $field Field definition.
-	 * @param mixed $value Stored value (string, array for multi-checkbox, or id).
-	 *
-	 * @return string Safe HTML.
-	 */
-	private function format_author_value( array $field, $value ) {
-		switch ( $field['type'] ) {
-			case 'url':
-				return '<a href="' . esc_url( (string) $value ) . '" target="_blank" rel="nofollow noopener">' . esc_html( (string) $value ) . '</a>';
-
-			case 'email':
-				return '<a href="mailto:' . esc_attr( antispambot( (string) $value ) ) . '">' . esc_html( antispambot( (string) $value ) ) . '</a>';
-
-			case 'tel':
-				return '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', (string) $value ) ) . '">' . esc_html( (string) $value ) . '</a>';
-
-			case 'checkbox':
-				if ( is_array( $value ) ) {
-					return esc_html( implode( ', ', $value ) );
-				}
-				return esc_html__( 'Yes', 'rtcl-account-fields' );
-
-			case 'switch':
-				return esc_html__( 'Yes', 'rtcl-account-fields' );
-
-			case 'file':
-				return $this->format_file_value( (int) $value );
-
-			case 'textarea':
-				return nl2br( esc_html( (string) $value ) );
-
-			default:
-				return esc_html( (string) $value );
-		}
-	}
-
-	/**
-	 * Public display for a file value: image thumbnail or a download link.
-	 *
-	 * @param int $att_id Attachment id.
-	 *
-	 * @return string Safe HTML.
-	 */
-	private function format_file_value( $att_id ) {
-		$url = $att_id ? wp_get_attachment_url( $att_id ) : '';
-		if ( ! $url ) {
-			return '';
-		}
-		if ( wp_attachment_is_image( $att_id ) ) {
-			return '<a href="' . esc_url( $url ) . '" target="_blank" rel="nofollow noopener">'
-				. wp_get_attachment_image( $att_id, [ 120, 120 ] )
-				. '</a>';
-		}
-		return '<a href="' . esc_url( $url ) . '" target="_blank" rel="nofollow noopener">'
-			. esc_html( wp_basename( (string) get_attached_file( $att_id ) ) )
-			. '</a>';
-	}
+	// Public display formatting moved to Fields::format_public_value() /
+	// Fields::format_file_value() so the author page and the store details
+	// popup render values through one shared, per-type-escaped code path.
 }

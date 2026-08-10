@@ -101,13 +101,77 @@ class Fields {
 			'placeholder'    => '',
 			'options'        => [],
 			'required'       => false,
-			'show_on_author' => true,
-			'show_on_register' => false,
+			// Per-context visibility switches. A new field is offered on the user
+			// profile editor only; every other surface is opt-in (the admin was
+			// previously forced to show every field on the author page — no more).
+			'show_on_user_profile'   => true,
+			'show_on_user_frontend'  => false,
+			'show_on_store_profile'  => false,
+			'show_on_store_frontend' => false,
+			'show_on_registration'   => false,
 			'visible_for'    => 'all',
 			'file_ext'       => '',
 			'max_size'       => 0,
 			'min'            => '',
 			'max'            => '',
+		];
+	}
+
+	/**
+	 * The per-context visibility switch keys, in display order.
+	 *
+	 * Each field definition carries one boolean per context. `visible_for`
+	 * (account type) is orthogonal to these and gates every context.
+	 *
+	 * @return string[]
+	 */
+	public static function context_keys() {
+		return [
+			'show_on_user_profile',
+			'show_on_user_frontend',
+			'show_on_store_profile',
+			'show_on_store_frontend',
+			'show_on_registration',
+		];
+	}
+
+	/**
+	 * Resolve the five context switches for a raw stored/submitted field,
+	 * migrating the legacy `show_on_author` / `show_on_register` flags so fields
+	 * saved before the multi-context model keep their previous behavior.
+	 *
+	 * @param array $raw Raw field definition (pre-defaults merge).
+	 *
+	 * @return array<string,bool> The five context keys => bool.
+	 */
+	public static function resolve_visibility( array $raw ) {
+		$has_new = false;
+		foreach ( self::context_keys() as $key ) {
+			if ( array_key_exists( $key, $raw ) ) {
+				$has_new = true;
+				break;
+			}
+		}
+
+		if ( $has_new ) {
+			return [
+				'show_on_user_profile'   => ! empty( $raw['show_on_user_profile'] ),
+				'show_on_user_frontend'  => ! empty( $raw['show_on_user_frontend'] ),
+				'show_on_store_profile'  => ! empty( $raw['show_on_store_profile'] ),
+				'show_on_store_frontend' => ! empty( $raw['show_on_store_frontend'] ),
+				'show_on_registration'   => ! empty( $raw['show_on_registration'] ),
+			];
+		}
+
+		// Legacy field: the account editor always showed it; the author page was
+		// gated by `show_on_author` (which defaulted to true); registration by
+		// `show_on_register`. Store contexts are new, so they start off.
+		return [
+			'show_on_user_profile'   => true,
+			'show_on_user_frontend'  => array_key_exists( 'show_on_author', $raw ) ? ! empty( $raw['show_on_author'] ) : true,
+			'show_on_store_profile'  => false,
+			'show_on_store_frontend' => false,
+			'show_on_registration'   => ! empty( $raw['show_on_register'] ),
 		];
 	}
 
@@ -136,11 +200,11 @@ class Fields {
 			if ( empty( $field['id'] ) ) {
 				continue;
 			}
+			$visibility              = self::resolve_visibility( $field );
 			$field                   = wp_parse_args( $field, self::defaults() );
+			$field                   = array_merge( $field, $visibility );
 			$field['options']        = is_array( $field['options'] ) ? $field['options'] : [];
 			$field['required']       = ! empty( $field['required'] );
-			$field['show_on_author'] = ! empty( $field['show_on_author'] );
-			$field['show_on_register'] = ! empty( $field['show_on_register'] );
 			$field['visible_for']    = in_array( $field['visible_for'], self::visibility_values(), true ) ? $field['visible_for'] : 'all';
 			$field['file_ext']       = implode( ', ', self::normalize_extensions( $field['file_ext'] ) );
 			$field['max_size']       = max( 0, (float) $field['max_size'] );
@@ -305,7 +369,7 @@ class Fields {
 				$options = array_values( array_unique( $options ) );
 			}
 
-			$clean[] = [
+			$clean[] = array_merge( [
 				'id'             => $id,
 				'label'          => $label,
 				'description'    => isset( $raw['description'] ) ? sanitize_textarea_field( (string) $raw['description'] ) : '',
@@ -313,14 +377,12 @@ class Fields {
 				'placeholder'    => isset( $raw['placeholder'] ) ? sanitize_text_field( (string) $raw['placeholder'] ) : '',
 				'options'        => $options,
 				'required'       => ! empty( $raw['required'] ),
-				'show_on_author' => ! empty( $raw['show_on_author'] ),
-				'show_on_register' => ! empty( $raw['show_on_register'] ),
 				'visible_for'    => $visible_for,
 				'file_ext'       => implode( ', ', self::normalize_extensions( $raw['file_ext'] ?? '' ) ),
 				'max_size'       => isset( $raw['max_size'] ) ? max( 0, (float) $raw['max_size'] ) : 0,
 				'min'            => self::normalize_number_setting( $raw['min'] ?? '' ),
 				'max'            => self::normalize_number_setting( $raw['max'] ?? '' ),
-			];
+			], self::resolve_visibility( $raw ) );
 		}
 
 		return $clean;
@@ -511,7 +573,22 @@ class Fields {
 	 * @return mixed
 	 */
 	public static function user_value_raw( $user_id, array $field ) {
-		return get_user_meta( $user_id, self::meta_key( $field['id'] ), true );
+		return self::object_value_raw( 'user', $user_id, $field );
+	}
+
+	/**
+	 * Raw stored value for an arbitrary meta object (user or post) + field. Store
+	 * contexts persist to the store *post* (`'post'`); account contexts to the
+	 * *user* (`'user'`). Same `_rtcl_acf_<id>` key, different object.
+	 *
+	 * @param string $object_type 'user' or 'post'.
+	 * @param int    $object_id   User id or post id.
+	 * @param array  $field       Field definition.
+	 *
+	 * @return mixed
+	 */
+	public static function object_value_raw( $object_type, $object_id, array $field ) {
+		return get_metadata( $object_type, (int) $object_id, self::meta_key( $field['id'] ), true );
 	}
 
 	/**
@@ -952,7 +1029,7 @@ class Fields {
 	 *
 	 * @return string Error message, or '' when valid.
 	 */
-	public static function validate_file( array $field, $user_id ) {
+	public static function validate_file( array $field, $object_id, $object_type = 'user' ) {
 		$key      = $field['id'];
 		$files    = isset( $_FILES[ self::FILE_INPUT ] ) ? $_FILES[ self::FILE_INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$removing = ! empty( $_POST[ self::FILE_REMOVE ][ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -996,7 +1073,7 @@ class Fields {
 
 		// No new upload — enforce required against the existing stored file.
 		if ( $field['required'] ) {
-			$has_existing = ! $removing && (int) self::user_value_raw( $user_id, $field ) > 0;
+			$has_existing = ! $removing && (int) self::object_value_raw( $object_type, $object_id, $field ) > 0;
 			if ( ! $has_existing ) {
 				/* translators: %s: field label */
 				return sprintf( __( '%s is required.', 'rtcl-account-fields' ), $field['label'] );
@@ -1009,26 +1086,33 @@ class Fields {
 	 * Process a file field for one user: store a new upload, remove the existing
 	 * one, or keep it. Persists the attachment id to user meta.
 	 *
-	 * @param array $field   Field definition.
-	 * @param int   $user_id User id.
+	 * @param array  $field       Field definition.
+	 * @param int    $object_id   User id (user context) or store post id (store context).
+	 * @param string $object_type 'user' or 'post'.
+	 * @param int    $author_id   Attachment author (defaults to the object for users,
+	 *                            or the current user for a post).
 	 *
 	 * @return int|\WP_Error New/kept attachment id (0 when cleared), or error.
 	 */
-	public static function save_file_field( array $field, $user_id ) {
+	public static function save_file_field( array $field, $object_id, $object_type = 'user', $author_id = 0 ) {
 		$key      = $field['id'];
 		$meta_key = self::meta_key( $key );
-		$current  = (int) get_user_meta( $user_id, $meta_key, true );
+		$object_id = (int) $object_id;
+		$current  = (int) get_metadata( $object_type, $object_id, $meta_key, true );
 		$remove   = ! empty( $_POST[ self::FILE_REMOVE ][ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! $author_id ) {
+			$author_id = ( 'user' === $object_type ) ? $object_id : (int) get_current_user_id();
+		}
 
 		if ( self::has_upload( $field ) ) {
-			$attachment_id = self::handle_upload( $field, $user_id );
+			$attachment_id = self::handle_upload( $field, $author_id );
 			if ( is_wp_error( $attachment_id ) ) {
 				return $attachment_id;
 			}
 			if ( $current && $current !== $attachment_id ) {
 				wp_delete_attachment( $current, true );
 			}
-			update_user_meta( $user_id, $meta_key, $attachment_id );
+			update_metadata( $object_type, $object_id, $meta_key, $attachment_id );
 			return $attachment_id;
 		}
 
@@ -1036,7 +1120,7 @@ class Fields {
 			if ( $current ) {
 				wp_delete_attachment( $current, true );
 			}
-			delete_user_meta( $user_id, $meta_key );
+			delete_metadata( $object_type, $object_id, $meta_key );
 			return 0;
 		}
 
@@ -1081,5 +1165,149 @@ class Fields {
 		unset( $_FILES['rtcl_acf_upload'] );
 
 		return $attachment_id;
+	}
+
+	/**
+	 * Format a stored value for public display, safely escaped per type. Shared
+	 * by the public author page and the store details popup so both surfaces
+	 * render values identically.
+	 *
+	 * @param array $field Field definition.
+	 * @param mixed $value Stored value (string, array for multi-checkbox, or id).
+	 *
+	 * @return string Safe HTML.
+	 */
+	public static function format_public_value( array $field, $value ) {
+		switch ( $field['type'] ) {
+			case 'url':
+				return '<a href="' . esc_url( (string) $value ) . '" target="_blank" rel="nofollow noopener">' . esc_html( (string) $value ) . '</a>';
+
+			case 'email':
+				return '<a href="mailto:' . esc_attr( antispambot( (string) $value ) ) . '">' . esc_html( antispambot( (string) $value ) ) . '</a>';
+
+			case 'tel':
+				return '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', (string) $value ) ) . '">' . esc_html( (string) $value ) . '</a>';
+
+			case 'checkbox':
+				if ( is_array( $value ) ) {
+					return esc_html( implode( ', ', $value ) );
+				}
+				return esc_html__( 'Yes', 'rtcl-account-fields' );
+
+			case 'switch':
+				return esc_html__( 'Yes', 'rtcl-account-fields' );
+
+			case 'file':
+				return self::format_file_value( (int) $value );
+
+			case 'textarea':
+				return nl2br( esc_html( (string) $value ) );
+
+			default:
+				return esc_html( (string) $value );
+		}
+	}
+
+	/**
+	 * Public display for a file value: image thumbnail or a download link.
+	 *
+	 * @param int $att_id Attachment id.
+	 *
+	 * @return string Safe HTML.
+	 */
+	public static function format_file_value( $att_id ) {
+		$url = $att_id ? wp_get_attachment_url( $att_id ) : '';
+		if ( ! $url ) {
+			return '';
+		}
+		if ( wp_attachment_is_image( $att_id ) ) {
+			return '<a href="' . esc_url( $url ) . '" target="_blank" rel="nofollow noopener">'
+				. wp_get_attachment_image( $att_id, [ 120, 120 ] )
+				. '</a>';
+		}
+		return '<a href="' . esc_url( $url ) . '" target="_blank" rel="nofollow noopener">'
+			. esc_html( wp_basename( (string) get_attached_file( $att_id ) ) )
+			. '</a>';
+	}
+
+	/**
+	 * Enqueue the base plugin's international phone widget (`rtcl-edit-account`)
+	 * and localize the country config it expects. Shared so any surface that
+	 * renders a `tel` field (account, registration, store profile) gets the
+	 * identical flag/dial-code widget + validation. No-op if already enqueued.
+	 *
+	 * @return void
+	 */
+	public static function enqueue_phone_widget() {
+		if ( wp_script_is( 'rtcl-edit-account', 'enqueued' ) ) {
+			return; // Already enqueued + configured (e.g. by the base or store page).
+		}
+
+		if ( ! wp_script_is( 'rtcl-edit-account', 'registered' ) ) {
+			$suffix = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+			wp_register_script(
+				'rtcl-edit-account',
+				rtcl()->get_assets_uri( "js/edit-account{$suffix}.js" ),
+				[ 'jquery', 'rtcl-validator' ],
+				defined( 'RTCL_VERSION' ) ? RTCL_VERSION : RTCL_ACF_VERSION,
+				true
+			);
+		}
+
+		wp_enqueue_script( 'rtcl-edit-account' );
+		wp_localize_script( 'rtcl-edit-account', 'rtcl_edit_account', self::phone_widget_config() );
+	}
+
+	/**
+	 * Build the `rtcl_edit_account` config the base phone widget expects: the
+	 * allowed country list + default country from Classified Listing's
+	 * Misc → Phone settings.
+	 *
+	 * @return array
+	 */
+	public static function phone_widget_config() {
+		$allowed = [];
+		$default = '';
+		$list    = [];
+
+		if ( class_exists( '\Rtcl\Helpers\Functions' ) ) {
+			$allowed = (array) \Rtcl\Helpers\Functions::get_option_item( 'rtcl_misc_phone_settings', 'phone_allowed_countries' );
+			$allowed = array_values( array_filter( array_map( 'strval', $allowed ) ) );
+			$default = (string) \Rtcl\Helpers\Functions::get_option_item( 'rtcl_misc_phone_settings', 'phone_default_country' );
+		}
+
+		$countries = ( function_exists( 'rtcl' ) && isset( rtcl()->countries ) ) ? rtcl()->countries : null;
+		if ( $countries ) {
+			if ( '' === $default && method_exists( $countries, 'get_base_country' ) ) {
+				$default = (string) $countries->get_base_country();
+			}
+			if ( ! empty( $allowed ) && ! in_array( $default, $allowed, true ) ) {
+				$default = (string) reset( $allowed );
+			}
+			foreach ( (array) $countries->get_countries() as $code => $name ) {
+				$dial = $countries->get_country_calling_code( $code );
+				if ( ! $dial ) {
+					continue;
+				}
+				if ( ! empty( $allowed ) && ! in_array( (string) $code, $allowed, true ) ) {
+					continue;
+				}
+				$list[] = [
+					'value'     => $code,
+					'label'     => $name . ' (' . $dial . ')',
+					'dial_code' => $dial,
+				];
+			}
+		}
+
+		return [
+			'countryPhoneList' => $list,
+			'default_country'  => $default,
+			'i18n'             => [
+				'search'        => __( 'Search', 'rtcl-account-fields' ),
+				'need_country'  => __( 'Please select a country code.', 'rtcl-account-fields' ),
+				'invalid_phone' => __( 'Please enter a valid phone number for the selected country.', 'rtcl-account-fields' ),
+			],
+		];
 	}
 }

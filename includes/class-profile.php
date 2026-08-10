@@ -78,7 +78,9 @@ class Profile {
 			array_filter(
 				Fields::all(),
 				static function ( $field ) use ( $user ) {
-					return Fields::field_visible_for_user( $field, $user->ID );
+					// The wp-admin profile screen is part of the "User profile" context.
+					return ! empty( $field['show_on_user_profile'] )
+						&& Fields::field_visible_for_user( $field, $user->ID );
 				}
 			)
 		);
@@ -281,6 +283,9 @@ class Profile {
 		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in submitted(); unslashed + validated in Fields::validate_value().
 
 		foreach ( Fields::all() as $field ) {
+			if ( empty( $field['show_on_user_profile'] ) ) {
+				continue;
+			}
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
 				continue;
 			}
@@ -312,6 +317,9 @@ class Profile {
 		$submitted = isset( $_POST[ self::INPUT ] ) && is_array( $_POST[ self::INPUT ] ) ? $_POST[ self::INPUT ] : []; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce verified in submitted(); unslashed + sanitized in Fields::sanitize_value().
 
 		foreach ( Fields::all() as $field ) {
+			if ( empty( $field['show_on_user_profile'] ) ) {
+				continue;
+			}
 			if ( ! Fields::field_visible_for_user( $field, $user_id ) ) {
 				continue;
 			}

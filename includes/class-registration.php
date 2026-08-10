@@ -46,7 +46,7 @@ class Registration {
 			array_filter(
 				Fields::all(),
 				static function ( $field ) {
-					return ! empty( $field['show_on_register'] ) && 'file' !== $field['type'];
+					return ! empty( $field['show_on_registration'] ) && 'file' !== $field['type'];
 				}
 			)
 		);
