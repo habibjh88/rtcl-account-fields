@@ -3,7 +3,7 @@
  * Plugin Name:       Classified Listing – Account Fields Manager
  * Plugin URI:        https://radiustheme.com/
  * Description:       Add-on for Classified Listing. Build extra custom fields with a drag-and-drop editor and show them on the registration form, the front-end Account Details page, the WordPress user profile screens, and the public author page. Requires Classified Listing 6.0.0 or newer.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires PHP:      7.4
  * Requires at least: 6.6
  * Requires Plugins:  classified-listing
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RTCL_ACF_VERSION', '1.0.0' );
+define( 'RTCL_ACF_VERSION', '1.0.1' );
 define( 'RTCL_ACF_FILE', __FILE__ );
 define( 'RTCL_ACF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'RTCL_ACF_URL', plugin_dir_url( __FILE__ ) );

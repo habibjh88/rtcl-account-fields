@@ -77,6 +77,10 @@ Classified Listing base plugin to be active).
 
 ## Changelog
 
+### 1.0.1 ( Oct 13, 2026 )
+
+- Added: Phone fields now show custom country codes from Misc → Phone settings.
+
 ### 1.0.0
 
 - Initial release.

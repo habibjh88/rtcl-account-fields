@@ -281,19 +281,33 @@ class Registration {
 			if ( ! empty( $allowed ) && ! in_array( $default, $allowed, true ) ) {
 				$default = (string) reset( $allowed );
 			}
-			foreach ( (array) $countries->get_countries() as $code => $name ) {
-				$dial = $countries->get_country_calling_code( $code );
-				if ( ! $dial ) {
-					continue;
+			if ( method_exists( $countries, 'get_phone_country_list' ) ) {
+				// Base plugin's shared list: built-in countries plus admin-added custom codes
+				// (flagged `custom`, which the base widget shows as a text badge, not a flag).
+				foreach ( (array) $countries->get_phone_country_list() as $entry ) {
+					if ( empty( $entry['value'] ) ) {
+						continue;
+					}
+					if ( ! empty( $allowed ) && ! in_array( (string) $entry['value'], $allowed, true ) ) {
+						continue;
+					}
+					$list[] = $entry;
 				}
-				if ( ! empty( $allowed ) && ! in_array( (string) $code, $allowed, true ) ) {
-					continue;
+			} else {
+				foreach ( (array) $countries->get_countries() as $code => $name ) {
+					$dial = $countries->get_country_calling_code( $code );
+					if ( ! $dial ) {
+						continue;
+					}
+					if ( ! empty( $allowed ) && ! in_array( (string) $code, $allowed, true ) ) {
+						continue;
+					}
+					$list[] = [
+						'value'     => $code,
+						'label'     => $name . ' (' . $dial . ')',
+						'dial_code' => $dial,
+					];
 				}
-				$list[] = [
-					'value'     => $code,
-					'label'     => $name . ' (' . $dial . ')',
-					'dial_code' => $dial,
-				];
 			}
 		}
 
